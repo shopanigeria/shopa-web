@@ -1,19 +1,21 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, CheckCircle2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { forgotPasswordSchema, type ForgotPasswordFormData } from "@/lib/validators/auth.validators";
 import { authService } from "@/lib/api";
+import { useRouter } from "next/navigation";
+import SuccessModal from "@/components/shared/SuccessModal";
 
 export default function ForgotPasswordPage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
-  const { register, handleSubmit, getValues, formState: { errors } } = useForm<ForgotPasswordFormData>({
+  const { register, handleSubmit, formState: { errors } } = useForm<ForgotPasswordFormData>({
     resolver: zodResolver(forgotPasswordSchema),
   });
 
@@ -32,31 +34,21 @@ export default function ForgotPasswordPage() {
 
   if (isSubmitted) {
     return (
-      <div className="text-center py-8">
-        <div className="flex justify-center mb-4">
-          <CheckCircle2 size={64} className="text-primary" />
-        </div>
-        <p className="text-neutral-black text-[14px] font-medium tracking-[-0.56px] leading-[28px] mb-6">
-          Check your mail inbox for a password reset email!
-        </p>
-        <Link href="/login" className="btn-primary inline-block">
-          Back to Login
-        </Link>
-      </div>
+      <SuccessModal
+        message="Check your mail inbox for a Password reset email!"
+        onClose={() => router.push("/login")}
+      />
     );
   }
 
   return (
     <div>
       <div className="text-center mb-6">
-        <h2
-          className="text-[20px] text-neutral-black leading-none mb-1"
-          style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 700 }}
-        >
+        <h2 className="font-satoshi font-bold text-[20px] text-neutral-black leading-none mb-1">
           Forgot Password
         </h2>
         <p className="text-neutral-gray text-[14px] font-medium tracking-[-0.56px] leading-[28px]">
-          Recover your password
+          Recover your Password
         </p>
       </div>
 
@@ -83,9 +75,10 @@ export default function ForgotPasswordPage() {
       </div>
 
       <button
+        type="submit"
         onClick={handleSubmit(onSubmit)}
         disabled={isLoading}
-        className="btn-primary mb-6"
+        className="btn-primary"
       >
         {isLoading ? (
           <span className="flex items-center justify-center gap-2">
@@ -96,11 +89,6 @@ export default function ForgotPasswordPage() {
           "Continue"
         )}
       </button>
-
-      <p className="text-center text-[14px] font-medium tracking-[-0.56px] leading-[28px] text-neutral-black">
-        Remember your password?{" "}
-        <Link href="/login" className="link-yellow">Sign in here</Link>
-      </p>
     </div>
   );
 }

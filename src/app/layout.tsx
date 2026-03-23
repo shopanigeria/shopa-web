@@ -5,6 +5,7 @@ import "@/styles/globals.css";
 export const metadata: Metadata = {
   title: { default: "Shopa", template: "%s | Shopa" },
   description: "Your campus marketplace, simplified.",
+  viewport: "width=device-width, initial-scale=1",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
