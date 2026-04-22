@@ -4,7 +4,6 @@ import { jwtDecode } from "jwt-decode";
 
 // ─── Route definitions ───────────────────────────────────────────────────────
 const PUBLIC_ROUTES = ["/", "/login", "/signup", "/forgot-password", "/reset-password"];
-const CUSTOMER_ROUTES = ["/home", "/categories", "/products", "/cart", "/checkout", "/orders", "/profile", "/saved", "/vouchers", "/referrals", "/help", "/terms"];
 const VENDOR_ROUTES = ["/vendor"];
 const ADMIN_ROUTES = ["/admin"];
 const SUPER_ADMIN_ROUTES = ["/superadmin"];

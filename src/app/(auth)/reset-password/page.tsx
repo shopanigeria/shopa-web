@@ -5,17 +5,17 @@ import { useState, Suspense } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Eye, EyeOff, Loader2, XCircle } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { resetPasswordSchema, type ResetPasswordFormData } from "@/lib/validators/auth.validators";
 import { authService } from "@/lib/api";
 import SuccessModal from "@/components/shared/SuccessModal";
 
 function ResetPasswordForm() {
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
@@ -40,12 +40,14 @@ function ResetPasswordForm() {
 
   if (!token) {
     return (
-      <div className="flex flex-col items-center justify-center py-8">
-        <XCircle size={64} className="text-red-500 mb-4" />
-        <p className="text-neutral-black text-[14px] font-medium tracking-[-0.56px] leading-[28px] mb-6 text-center">
+      <div className="flex flex-col items-center justify-center py-8 gap-6">
+        <p className="text-[#151515] text-[14px] font-medium tracking-[-0.56px] leading-[28px] text-center">
           This reset link is invalid or has expired.
         </p>
-        <Link href="/forgot-password" className="btn-primary inline-block text-center">
+        <Link
+          href="/forgot-password"
+          className="w-full h-[45px] bg-[#2E7D32] text-white rounded-[8px] font-semibold text-[14px] text-center flex items-center justify-center"
+        >
           Request new link
         </Link>
       </div>
@@ -55,7 +57,7 @@ function ResetPasswordForm() {
   if (isSuccess) {
     return (
       <SuccessModal
-        message="Your Password has been successfully reset!"
+        message="Your password has been successfully reset!"
         onClose={() => router.push("/login")}
       />
     );
@@ -63,20 +65,17 @@ function ResetPasswordForm() {
 
   return (
     <div>
-      <div className="text-center mb-6">
-        <h2 className="font-satoshi font-bold text-[20px] text-neutral-black leading-none mb-1">
+      <div className="text-center mb-[10px]">
+        <h2 className="font-satoshi font-bold text-[20px] text-[#151515] leading-[1.35]">
           Create New Password
         </h2>
-        <p className="text-neutral-gray text-[14px] font-medium tracking-[-0.56px] leading-[28px]">
-          Enter a new Password
+        <p className="text-[#9B9B9B] text-[14px] font-medium tracking-[-0.56px] leading-[28px]">
+          Enter a new password
         </p>
+        {error && (
+          <p className="text-[#FDC500] text-[14px] font-medium leading-[28px]">{error}</p>
+        )}
       </div>
-
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-[12px]">
-          {error}
-        </div>
-      )}
 
       <div className="space-y-[10px] mb-6">
         <div className="space-y-[5px]">
@@ -85,20 +84,21 @@ function ResetPasswordForm() {
             <input
               {...register("password")}
               type={showPassword ? "text" : "password"}
-              placeholder="Enter your new 4-digit password"
+              placeholder="Enter your new password"
               className="input-field pr-10"
               autoComplete="new-password"
             />
             <button
               type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-gray"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute right-[10px] top-1/2 -translate-y-1/2 text-[#9B9B9B]"
+              aria-label={showPassword ? "Hide password" : "Show password"}
             >
-              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
           {errors.password && (
-            <p className="text-red-500 text-[11px]">{errors.password.message}</p>
+            <p className="text-[#FDC500] text-[11px]">{errors.password.message}</p>
           )}
         </div>
 
@@ -107,21 +107,22 @@ function ResetPasswordForm() {
           <div className="relative">
             <input
               {...register("confirmPassword")}
-              type={showConfirm ? "text" : "password"}
-              placeholder="Confirm your new 4-digit password"
+              type={showConfirmPassword ? "text" : "password"}
+              placeholder="Confirm your new password"
               className="input-field pr-10"
               autoComplete="new-password"
             />
             <button
               type="button"
-              onClick={() => setShowConfirm(!showConfirm)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-gray"
+              onClick={() => setShowConfirmPassword((v) => !v)}
+              className="absolute right-[10px] top-1/2 -translate-y-1/2 text-[#9B9B9B]"
+              aria-label={showConfirmPassword ? "Hide password" : "Show password"}
             >
-              {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+              {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
           {errors.confirmPassword && (
-            <p className="text-red-500 text-[11px]">{errors.confirmPassword.message}</p>
+            <p className="text-[#FDC500] text-[11px]">{errors.confirmPassword.message}</p>
           )}
         </div>
       </div>
@@ -130,13 +131,13 @@ function ResetPasswordForm() {
         type="submit"
         onClick={handleSubmit(onSubmit)}
         disabled={isLoading}
-        className="btn-primary"
+        className="w-full h-[45px] bg-[#2E7D32] text-white rounded-[8px] font-semibold text-[14px] text-center hover:bg-[#1D5620] active:bg-[#1D5620] transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
       >
         {isLoading ? (
-          <span className="flex items-center justify-center gap-2">
+          <>
             <Loader2 size={16} className="animate-spin" />
             Resetting...
-          </span>
+          </>
         ) : (
           "CONFIRM"
         )}

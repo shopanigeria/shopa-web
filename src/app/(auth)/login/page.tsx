@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
@@ -10,9 +10,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { loginSchema, type LoginFormData } from "@/lib/validators/auth.validators";
 import SuccessModal from "@/components/shared/SuccessModal";
 
+const REMEMBER_EMAIL_KEY = "shopa_remembered_email";
+const REMEMBER_PASSWORD_KEY = "shopa_remembered_password";
+
 function LoginForm() {
-  const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { login, isLoginPending, loginError } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -21,12 +24,33 @@ function LoginForm() {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   });
 
-  const onSubmit = (data: LoginFormData) => login(data);
+  // Load saved credentials on mount
+  useEffect(() => {
+    const savedEmail = localStorage.getItem(REMEMBER_EMAIL_KEY);
+    const savedPassword = localStorage.getItem(REMEMBER_PASSWORD_KEY);
+    if (savedEmail && savedPassword) {
+      setValue("email", savedEmail);
+      setValue("password", savedPassword);
+      setRememberMe(true);
+    }
+  }, [setValue]);
+
+  const onSubmit = (data: LoginFormData) => {
+    if (rememberMe) {
+      localStorage.setItem(REMEMBER_EMAIL_KEY, data.email);
+      localStorage.setItem(REMEMBER_PASSWORD_KEY, data.password);
+    } else {
+      localStorage.removeItem(REMEMBER_EMAIL_KEY);
+      localStorage.removeItem(REMEMBER_PASSWORD_KEY);
+    }
+    login(data);
+  };
 
   const errorMessage =
     (loginError as any)?.response?.data?.message ?? (loginError as any)?.message;
@@ -43,21 +67,19 @@ function LoginForm() {
   return (
     <div>
       {/* Header */}
-      <div className="text-center mb-6">
-        <h2 className="font-satoshi font-bold text-[20px] text-neutral-black leading-none mb-1">
+      <div className="text-center mb-[10px]">
+        <h2 className="font-satoshi font-bold text-[20px] text-[#151515] leading-[1.35]">
           LOGIN
         </h2>
-        <p className="text-neutral-gray text-[14px] font-medium tracking-[-0.56px] leading-[28px]">
+        <p className="text-[#9B9B9B] text-[14px] font-medium tracking-[-0.56px] leading-[28px]">
           Sign in to your Shopa account
         </p>
+        {errorMessage && (
+          <p className="text-[#FDC500] text-[14px] font-medium leading-[28px] mt-0">
+            Incorrect Email or Password!
+          </p>
+        )}
       </div>
-
-      {/* Error */}
-      {errorMessage && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-[12px]">
-          {errorMessage}
-        </div>
-      )}
 
       <div className="space-y-[10px] mb-[10px]">
         {/* Email or Phone */}
@@ -65,13 +87,14 @@ function LoginForm() {
           <label className="label-field">Email or Phone</label>
           <input
             {...register("email")}
-            type="email"
+            type="text"
+            inputMode="email"
             placeholder="Enter your email or phone number"
             className="input-field"
             autoComplete="email"
           />
           {errors.email && (
-            <p className="text-red-500 text-[11px]">{errors.email.message}</p>
+            <p className="text-[#FDC500] text-[11px]">{errors.email.message}</p>
           )}
         </div>
 
@@ -82,61 +105,65 @@ function LoginForm() {
             <input
               {...register("password")}
               type={showPassword ? "text" : "password"}
-              placeholder="Enter your 4-digit password"
+              placeholder="Enter your password"
               className="input-field pr-10"
               autoComplete="current-password"
             />
             <button
               type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-gray"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute right-[10px] top-1/2 -translate-y-1/2 text-[#9B9B9B]"
+              aria-label={showPassword ? "Hide password" : "Show password"}
             >
-              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
           {errors.password && (
-            <p className="text-red-500 text-[11px]">{errors.password.message}</p>
+            <p className="text-[#FDC500] text-[11px]">{errors.password.message}</p>
           )}
         </div>
       </div>
 
       {/* Remember me + Forgot Password */}
       <div className="flex items-center justify-between mb-6">
-        <label className="flex items-center gap-[6px] cursor-pointer">
+        <label className="flex items-center gap-[5px] cursor-pointer py-[10px] pr-[10px]">
           <input
             type="checkbox"
             checked={rememberMe}
             onChange={(e) => setRememberMe(e.target.checked)}
-            className="w-[14px] h-[14px] rounded-sm border border-neutral-gray accent-primary"
+            className="w-[16px] h-[16px] rounded-sm border border-[#9B9B9B] accent-primary"
           />
-          <span className="text-neutral-black text-[12px] tracking-[-0.48px]">Remember Me</span>
+          <span className="text-[#151515] text-[12px] tracking-[-0.48px]">Remember Me</span>
         </label>
-        <Link href="/forgot-password" className="text-secondary font-semibold text-[12px]">
+        <Link
+          href="/forgot-password"
+          className="text-[#FDC500] font-semibold text-[12px] py-[10px] pl-[10px]"
+        >
           Forgot Password?
         </Link>
       </div>
 
-      {/* Login button */}
+      {/* LOGIN button — full width */}
       <button
         type="submit"
         onClick={handleSubmit(onSubmit)}
         disabled={isLoginPending}
-        className="btn-primary mb-4"
+        className="w-full h-[45px] bg-[#2E7D32] text-white rounded-[8px] font-semibold text-[14px] text-center hover:bg-[#1D5620] active:bg-[#1D5620] transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 mb-6"
       >
         {isLoginPending ? (
-          <span className="flex items-center justify-center gap-2">
+          <>
             <Loader2 size={16} className="animate-spin" />
             Logging in...
-          </span>
+          </>
         ) : (
           "LOGIN"
         )}
       </button>
 
       {/* Sign up link */}
-      <p className="text-center text-[14px] font-medium tracking-[-0.56px] leading-[28px] text-neutral-black">
+      <p className="text-center text-[14px] font-medium tracking-[-0.56px] leading-[28px] text-[#151515]">
         Don&apos;t have an account yet?{" "}
-        <Link href="/signup" className="link-yellow">
+        <Link href="/signup" className="text-[#FDC500] font-semibold underline">
           Sign up here
         </Link>
       </p>

@@ -19,22 +19,23 @@ export default function SuccessModal({ message, onClose }: SuccessModalProps) {
           backgroundPosition: "center",
         }}
       />
-      {/* Card */}
-      <div className="relative z-10 w-full max-w-[340px] bg-white rounded-[20px] px-6 py-10">
-        {/* Close button */}
+      {/* Card — fully rounded, matches Figma borderRadius: 24px */}
+      <div className="relative z-10 w-full bg-white rounded-[24px] px-[24px] py-[38px]">
+        {/* x-circle close button */}
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 w-8 h-8 rounded-full border-2 border-neutral-gray flex items-center justify-center text-neutral-gray hover:border-neutral-black hover:text-neutral-black transition-colors"
+          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white flex items-center justify-center text-[#9B9B9B] hover:text-[#151515] transition-colors"
+          aria-label="Close"
         >
-          <X size={14} />
+          <X size={18} />
         </button>
-        {/* Check icon */}
+        {/* Check icon + message */}
         <div className="flex flex-col items-center gap-6">
-          <div className="w-[80px] h-[80px] rounded-full bg-primary flex items-center justify-center">
+          <div className="w-[80px] h-[80px] rounded-full bg-[#2E7D32] flex items-center justify-center">
             <Check size={40} strokeWidth={3} className="text-white" />
           </div>
-          <p className="text-primary text-[15px] font-medium text-center leading-[26px] tracking-[-0.3px]">
+          <p className="text-[#2E7D32] text-[14px] font-medium text-center leading-[28px] tracking-[-0.56px]">
             {message}
           </p>
         </div>

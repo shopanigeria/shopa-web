@@ -66,34 +66,41 @@ export interface Vendor {
 // ─── Order ────────────────────────────────────────────────────────────────────
 
 export type OrderStatus =
-  | "pending"
-  | "confirmed"
-  | "processing"
-  | "shipped"
-  | "delivered"
-  | "cancelled"
-  | "disputed";
+  | "PENDING"
+  | "PAID"
+  | "CONFIRMED"
+  | "SHIPPED"
+  | "DELIVERED"
+  | "COMPLETED"
+  | "CANCELLED";
 
 export interface OrderItem {
   id: string;
-  product: Pick<Product, "id" | "name" | "imageUrls" | "price">;
   quantity: number;
-  unitPrice: number;
-  total: number;
+  price: string;
+  product: {
+    id?: string;
+    name: string;
+    images: string[];
+    imageUrls?: string[];
+  };
 }
 
 export interface Order {
   id: string;
-  reference: string;
-  items: OrderItem[];
-  status: OrderStatus;
-  subtotal: number;
-  serviceFee: number;
-  paystackFee: number;
-  total: number;
-  deliveryAddress?: string;
+  orderNumber: string;
+  status: OrderStatus | string;
+  totalAmount: string;
+  deliveryAddress?: string | null;
+  deliveryMethod?: string | null;
+  notes?: string | null;
   createdAt: string;
   updatedAt: string;
+  buyerId?: string;
+  vendorId?: string;
+  orderItems: OrderItem[];
+  vendor?: { storeName: string };
+  payment?: { status: string };
 }
 
 // ─── Cart ─────────────────────────────────────────────────────────────────────
@@ -142,6 +149,17 @@ export interface Dispute {
     accountNumber: string;
     accountName: string;
   };
+  createdAt: string;
+}
+
+// ─── Review ───────────────────────────────────────────────────────────────────
+
+export interface Review {
+  id: string;
+  productId: string;
+  rating: number;
+  comment: string;
+  reviewer?: Pick<User, "id" | "firstName" | "lastName" | "avatar">;
   createdAt: string;
 }
 

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { ChevronLeft, Loader2 } from "lucide-react";
 import { forgotPasswordSchema, type ForgotPasswordFormData } from "@/lib/validators/auth.validators";
 import { authService } from "@/lib/api";
 import { useRouter } from "next/navigation";
@@ -35,7 +35,7 @@ export default function ForgotPasswordPage() {
   if (isSubmitted) {
     return (
       <SuccessModal
-        message="Check your mail inbox for a Password reset email!"
+        message="Check your mail inbox for a password reset email!"
         onClose={() => router.push("/login")}
       />
     );
@@ -43,20 +43,28 @@ export default function ForgotPasswordPage() {
 
   return (
     <div>
-      <div className="text-center mb-6">
-        <h2 className="font-satoshi font-bold text-[20px] text-neutral-black leading-none mb-1">
+      {/* Back button */}
+      <button
+        type="button"
+        onClick={() => router.push("/login")}
+        className="flex items-center gap-1 text-[#151515] text-[14px] font-medium mb-[10px] -ml-1"
+        aria-label="Back to login"
+      >
+        <ChevronLeft size={20} />
+        Back
+      </button>
+
+      <div className="text-center mb-[10px]">
+        <h2 className="font-satoshi font-bold text-[20px] text-[#151515] leading-[1.35]">
           Forgot Password
         </h2>
-        <p className="text-neutral-gray text-[14px] font-medium tracking-[-0.56px] leading-[28px]">
-          Recover your Password
+        <p className="text-[#9B9B9B] text-[14px] font-medium tracking-[-0.56px] leading-[28px]">
+          Recover your password
         </p>
+        {error && (
+          <p className="text-[#FDC500] text-[14px] font-medium leading-[28px]">{error}</p>
+        )}
       </div>
-
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-[12px]">
-          {error}
-        </div>
-      )}
 
       <div className="space-y-[10px] mb-6">
         <div className="space-y-[5px]">
@@ -69,7 +77,7 @@ export default function ForgotPasswordPage() {
             autoComplete="email"
           />
           {errors.email && (
-            <p className="text-red-500 text-[11px]">{errors.email.message}</p>
+            <p className="text-[#FDC500] text-[11px]">{errors.email.message}</p>
           )}
         </div>
       </div>
@@ -78,13 +86,13 @@ export default function ForgotPasswordPage() {
         type="submit"
         onClick={handleSubmit(onSubmit)}
         disabled={isLoading}
-        className="btn-primary"
+        className="w-full h-[45px] bg-[#2E7D32] text-white rounded-[8px] font-semibold text-[14px] text-center hover:bg-[#1D5620] active:bg-[#1D5620] transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
       >
         {isLoading ? (
-          <span className="flex items-center justify-center gap-2">
+          <>
             <Loader2 size={16} className="animate-spin" />
             Sending...
-          </span>
+          </>
         ) : (
           "Continue"
         )}
