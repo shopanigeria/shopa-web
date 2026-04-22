@@ -33,7 +33,7 @@ export const tokenStorage = {
 // ─── Axios instance ───────────────────────────────────────────────────────────
 export const apiClient = axios.create({
   baseURL: API_URL,
-  timeout: 15000,
+  timeout: 60000,
   headers: { "Content-Type": "application/json" },
   withCredentials: true,
 });

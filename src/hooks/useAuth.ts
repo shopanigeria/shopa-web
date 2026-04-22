@@ -7,7 +7,6 @@ import { useAuthStore } from "@/stores/auth.store";
 import { authService } from "@/lib/api";
 import { tokenStorage } from "@/lib/api";
 import { QUERY_KEYS, ROUTES } from "@/lib/constants";
-import type { LoginPayload, SignupPayload } from "@/lib/api/services/auth.service";
 
 export function useAuth() {
   const router = useRouter();

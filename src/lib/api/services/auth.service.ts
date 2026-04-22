@@ -2,7 +2,7 @@ import { apiClient, tokenStorage } from "../client";
 import type { User } from "@/types";
 
 export interface LoginPayload { email: string; password: string; }
-export interface SignupPayload { firstName: string; email: string; phone?: string; password: string; university?: string; }
+export interface SignupPayload { firstName: string; lastName: string; email: string; phone?: string; password: string; campusId?: string; }
 export interface AuthResponse { user: User; accessToken: string; refreshToken: string; }
 
 export const authService = {

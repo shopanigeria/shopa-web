@@ -23,14 +23,18 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <div className="relative z-10 flex flex-col min-h-screen w-full md:max-w-[430px] md:mx-auto md:min-h-screen">
         {/* Logo area */}
         <div className="flex-1 flex items-center justify-center min-h-[220px] py-10">
-          <h1 className="font-satoshi font-bold text-secondary text-[52px] leading-none">
-            Shopa
-          </h1>
+          <Image
+            src="/images/logo.svg"
+            alt="Shopa"
+            width={160}
+            height={60}
+            priority
+          />
         </div>
 
         {/* White bottom-sheet card */}
         <div className="bg-white rounded-t-[24px] animate-slide-up shrink-0">
-          <div className="px-6 pt-8 pb-10">
+          <div className="px-[24px] pt-[38px] pb-[38px]">
             {children}
           </div>
         </div>

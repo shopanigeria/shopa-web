@@ -9,17 +9,21 @@ export const ROUTES = {
   // Customer
   HOME: "/home",
   CATEGORIES: "/categories",
+  PRODUCTS: "/products",
   PRODUCT: (id: string) => `/products/${id}`,
   CART: "/cart",
   CHECKOUT: "/checkout",
+  CHECKOUT_SUCCESS: "/checkout/success",
   ORDERS: "/orders",
   ORDER: (id: string) => `/orders/${id}`,
   PROFILE: "/profile",
+  ACCOUNT_SETTINGS: "/account-settings",
   SAVED: "/saved",
   VOUCHERS: "/vouchers",
   REFERRALS: "/referrals",
   HELP: "/help",
   TERMS: "/terms",
+  DISPUTES_NEW: "/disputes/new",
 
   // Vendor
   VENDOR_DASHBOARD: "/vendor/dashboard",
@@ -48,6 +52,7 @@ export const QUERY_KEYS = {
   CART: ["cart"],
   SAVED_ITEMS: ["saved-items"],
   VOUCHERS: ["vouchers"],
+  REVIEWS: (productId: string) => ["reviews", productId],
 } as const;
 
 export const SERVICE_FEE_RATE = 0.075;
