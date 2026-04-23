@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import ScreenHeader from "@/components/layout/ScreenHeader";
+import BackButton from "@/components/layout/BackButton";
 import { useAuthStore } from "@/stores/auth.store";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
@@ -57,8 +58,10 @@ export default function AccountSettingsPage() {
   return (
     <div className="min-h-screen bg-[#F7FFF8]">
       <ScreenHeader title="Account Settings" showBack />
+      <div className="md:px-6 lg:px-8 md:pt-[20px]"><BackButton label="Account Settings" /></div>
 
-      <div className="px-[24px] pt-[24px] pb-[24px] flex flex-col gap-[16px]">
+      <div className="md:max-w-[720px] md:mx-auto md:px-6 lg:px-8">
+      <div className="px-[24px] md:px-0 pt-[24px] pb-[24px] flex flex-col gap-[16px]">
         <div>
           <label htmlFor="firstName" className="font-jakarta text-[12px] font-medium text-[#333333] mb-[5px] block tracking-[-0.04em]">
             First Name
@@ -118,10 +121,11 @@ export default function AccountSettingsPage() {
         </div>
 
       </div>
+      </div>
 
       {/* Save button — fixed at bottom */}
       <div className="fixed bottom-0 left-0 right-0 flex justify-center z-20 pointer-events-none">
-        <div className="w-full max-w-[390px] px-[24px] pb-[32px] pointer-events-auto">
+        <div className="w-full max-w-[390px] md:max-w-[720px] px-[24px] pb-[32px] pointer-events-auto">
           <button
             type="button"
             onClick={handleSave}

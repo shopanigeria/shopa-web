@@ -36,8 +36,8 @@ export default function BottomNav() {
   if (HIDDEN_ON.some((pattern) => pattern.test(pathname))) return null;
 
   return (
-    /* Fixed to viewport bottom, centered within the 390px content column */
-    <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
+    /* Fixed to viewport bottom, centered within the 390px content column — hidden on tablet/desktop */
+    <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
       <div className="w-full max-w-[390px] px-[24px] pb-[17px] pointer-events-none">
         <div className="h-[55px] rounded-[48px] bg-[rgba(255,255,255,0.75)] shadow-[0px_0px_1px_0px_rgba(0,0,0,0.3)] backdrop-blur-sm flex flex-row items-center px-[4px] pointer-events-auto">
           {tabs.map(({ name, href, icon: Icon }) => {

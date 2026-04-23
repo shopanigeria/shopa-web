@@ -1,13 +1,15 @@
 "use client";
 
 import ScreenHeader from "@/components/layout/ScreenHeader";
+import BackButton from "@/components/layout/BackButton";
 
 export default function TermsPoliciesPage() {
   return (
     <div className="min-h-screen bg-[#F7FFF8]">
       <ScreenHeader title="Terms & Policies" showBack />
+      <div className="md:px-6 lg:px-8 md:pt-[20px]"><BackButton label="Terms & Policies" /></div>
 
-      <div className="px-[24px] pt-[24px] pb-[100px]">
+      <div className="px-[24px] md:px-6 lg:px-8 pt-[24px] pb-[100px] md:max-w-[720px] md:mx-auto">
         <h1 className="font-jakarta text-[18px] font-bold text-[#151515] tracking-[-0.04em] mb-[16px]">
           Terms & Policies
         </h1>

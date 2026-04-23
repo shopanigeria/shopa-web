@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowUpDown, SlidersHorizontal } from "lucide-react";
 import ScreenHeader from "@/components/layout/ScreenHeader";
+import BackButton from "@/components/layout/BackButton";
 import { useOrders } from "@/hooks/useOrders";
 import { ROUTES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -56,6 +57,8 @@ export default function OrdersPage() {
   return (
     <div className="min-h-screen bg-[#F7FFF8]">
       <ScreenHeader title="Order History" showBack />
+      <div className="md:max-w-[1280px] md:mx-auto md:px-6 lg:px-8">
+        <BackButton label="Order History" />
 
       {/* Toolbar */}
       <div className="relative px-[24px] py-[16px] flex gap-[12px] z-10">
@@ -169,6 +172,7 @@ export default function OrdersPage() {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }

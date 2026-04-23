@@ -33,7 +33,7 @@ export default function ProductCard({ product, className }: ProductCardProps) {
   };
 
   return (
-    <div className={cn("w-[170px] shrink-0 rounded-[12px] border border-[#EAEAEA] bg-white overflow-hidden", className)}>
+    <div className={cn("w-[170px] shrink-0 rounded-[12px] border border-[#EAEAEA] bg-white overflow-hidden md:w-full md:hover:shadow-md md:hover:scale-[1.02] md:transition-all md:duration-200", className)}>
       {/* Image area */}
       <Link href={ROUTES.PRODUCT(product.id)} className="relative block w-full h-[137px] bg-[#F7FFF8] overflow-hidden">
         {imageUri ? (
@@ -42,7 +42,7 @@ export default function ProductCard({ product, className }: ProductCardProps) {
             alt={product.name}
             fill
             className="object-cover"
-            sizes="(max-width: 390px) 50vw, 195px"
+            sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">

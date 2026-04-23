@@ -437,3 +437,48 @@ Profile (604:9269) [Tab: Profile]
 **Back navigation**: All inner screens use `chevron-left` icon top-left to go back.
 **Modal/Sheet patterns**: Sort-by and Filter-by open as bottom sheets (not full page navigation).
 **Delivery type**: Checkout has in-page toggle between Pickup and Delivery that reveals address field.
+
+## React Native Source (Reference Only - DO NOT MODIFY)
+Path: /Users/badman/Desktop/SHOPPA/customer-test
+Use this as the source of truth for UI and business logic when converting screens to Next.js.
+## Navigation Pattern
+- Mobile (< 768px): Bottom navigation bar fixed to bottom of screen
+- Tablet/Desktop (≥ 768px): Top navigation bar with full menu
+- Bottom nav tabs: Home, Categories, Cart, Orders, Profile
+- Never show bottom nav on auth screens or full-screen overlays
+
+### Vendor Registration & Dashboard — `/vendors`
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/vendors/register` | Register as a new vendor (public) |
+| GET | `/vendors` | List all approved vendors |
+| GET | `/vendors/:id` | Get vendor by ID |
+| GET | `/vendors/me/profile` | Get current vendor profile |
+| PATCH | `/vendors/me/profile` | Update vendor profile |
+| GET | `/vendors/me/balance` | Get vendor available balance |
+| POST | `/vendors/me/withdrawal` | Request a withdrawal |
+| GET | `/vendors/me/withdrawals` | Get withdrawal history |
+| GET | `/vendors/admin/pending` | List pending vendor applications (admin) |
+| PATCH | `/vendors/admin/:id/verify` | Approve or reject vendor (admin) |
+| GET | `/vendors/admin/withdrawals` | List all withdrawal requests (admin) |
+| PATCH | `/vendors/admin/withdrawals/:id` | Process withdrawal request (admin) |
+
+### Updated Orders — `/orders`
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/orders/:id/accept` | Vendor accepts an order |
+| POST | `/orders/:id/reject` | Vendor rejects an order (body: { reason }) |
+
+### Updated Disputes — `/disputes`
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/disputes/vendor-disputes` | Get disputes on vendor's orders |
+| POST | `/disputes/:id/respond` | Vendor responds to a dispute (body: { response }) |
+
+### Vendor Business Logic
+- Vendor registration requires admin approval before login is possible
+- Available balance = completed orders earnings minus pending/approved withdrawals
+- Dispute window = 24 hours after vendor marks order as DELIVERED
+- After dispute window expires, customer can no longer raise disputes on that order
+- Withdrawal requests go to admin for manual processing
+- Minimum withdrawal amount: ₦500

@@ -39,7 +39,7 @@ function SuccessContent() {
   }, [reference]);
 
   return (
-    <div className="min-h-screen bg-[#F7FFF8] flex flex-col items-center justify-center px-[24px]">
+    <div className="min-h-screen bg-[#F7FFF8] flex flex-col items-center justify-center px-[24px] md:max-w-[560px] md:mx-auto">
       {status === "loading" ? (
         <div className="h-12 w-12 rounded-full border-4 border-[#2E7D32] border-t-transparent animate-spin" />
       ) : status === "success" ? (

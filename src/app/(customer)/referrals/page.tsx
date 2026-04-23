@@ -2,6 +2,7 @@
 
 import { Gift, Copy } from "lucide-react";
 import ScreenHeader from "@/components/layout/ScreenHeader";
+import BackButton from "@/components/layout/BackButton";
 import { toast } from "sonner";
 
 const REFERRAL_LINK = "https://shoppa.ng/ref/esther123";
@@ -17,8 +18,9 @@ export default function ReferralsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F7FFF8] flex flex-col">
+    <div className="min-h-screen bg-[#F7FFF8] flex flex-col md:max-w-[720px] md:mx-auto">
       <ScreenHeader title="Referrals" showBack />
+      <div className="md:px-6 lg:px-8 md:pt-[20px]"><BackButton label="Referrals" /></div>
 
       <div className="flex-1 flex flex-col items-center justify-center px-[24px] py-[40px]">
         <Gift size={120} className="text-[#2E7D32] mb-[16px]" />

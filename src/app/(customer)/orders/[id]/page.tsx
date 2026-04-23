@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { ShoppingBag, ClipboardList, User, Bike, Check } from "lucide-react";
 import ScreenHeader from "@/components/layout/ScreenHeader";
+import BackButton from "@/components/layout/BackButton";
 import { useOrder } from "@/hooks/useOrders";
 import { formatNaira } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -167,6 +168,7 @@ export default function OrderDetailPage() {
     return (
       <div className="min-h-screen bg-[#F7FFF8]">
         <ScreenHeader title="Order History" showBack />
+        <div className="md:px-6 lg:px-8 md:pt-[20px]"><BackButton label="Order History" /></div>
         <div className="flex items-center justify-center py-20">
           <div className="h-10 w-10 rounded-full border-4 border-[#2E7D32] border-t-transparent animate-spin" />
         </div>
@@ -178,6 +180,7 @@ export default function OrderDetailPage() {
     return (
       <div className="min-h-screen bg-[#F7FFF8]">
         <ScreenHeader title="Order History" showBack />
+        <div className="md:px-6 lg:px-8 md:pt-[20px]"><BackButton label="Order History" /></div>
         <div className="flex items-center justify-center py-20 px-[24px]">
           <p className="font-jakarta text-[14px] text-[#9B9B9B] text-center">
             {isError ? "Failed to load order details." : "Order not found."}

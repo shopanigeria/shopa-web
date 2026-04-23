@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronUp, Check, X, Paperclip } from "lucide-react";
 import ScreenHeader from "@/components/layout/ScreenHeader";
+import BackButton from "@/components/layout/BackButton";
 import { useOrders } from "@/hooks/useOrders";
 import { useCreateDispute } from "@/hooks/useOrders";
 import { ROUTES } from "@/lib/constants";
@@ -76,8 +77,9 @@ export default function RaiseDisputePage() {
   return (
     <div className="min-h-screen bg-[#F7FFF8]">
       <ScreenHeader title="Raise Order Dispute" showBack />
+      <div className="md:px-6 lg:px-8 md:pt-[20px]"><BackButton label="Raise Order Dispute" /></div>
 
-      <div className="px-[24px] pt-[24px] pb-[120px]">
+      <div className="px-[24px] md:px-6 lg:px-8 pt-[24px] pb-[120px] md:max-w-[720px] md:mx-auto">
 
         {/* Order picker */}
         <div className="mb-[24px]">

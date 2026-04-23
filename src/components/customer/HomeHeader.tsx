@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Search, ShoppingCart, Bell } from "lucide-react";
+import { Search, ShoppingCart } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ROUTES } from "@/lib/constants";
 import { useCartStore } from "@/stores/cart.store";
@@ -16,7 +16,9 @@ export default function HomeHeader({ searchQuery, onSearchChange }: HomeHeaderPr
   const totalItems = useCartStore((s) => s.totalItems());
 
   return (
-    <div className="sticky top-0 z-40 bg-[#2E7D32] h-[155px] rounded-b-[12px] relative overflow-visible shrink-0">
+    /* Mobile: full-width green bar at 155px, rounded-b-[12px]
+       md+: hidden (NavBar takes over) */
+    <div className="md:hidden sticky top-0 z-40 bg-[#2E7D32] h-[155px] rounded-b-[12px] relative overflow-visible shrink-0">
       {/* Shopa logo — left */}
       <div className="absolute left-[25px] top-[43px]">
         <Image src="/images/logo.svg" alt="Shopa" width={95} height={26} priority />
@@ -37,7 +39,6 @@ export default function HomeHeader({ searchQuery, onSearchChange }: HomeHeaderPr
             </span>
           )}
         </button>
-        
       </div>
 
       {/* Search bar */}
@@ -48,7 +49,7 @@ export default function HomeHeader({ searchQuery, onSearchChange }: HomeHeaderPr
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Search for any item.."
-          className="flex-1 text-[12px] text-[#151515] placeholder:text-[#C2C2C2] bg-transparent focus:outline-none font-jakarta"
+          className="flex-1 text-[12px] text-[#151515] placeholder:text-[#C2C2C2] bg-transparent focus:outline-none font-jakarta tracking-[-0.04em]"
         />
       </div>
     </div>
