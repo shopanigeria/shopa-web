@@ -44,10 +44,22 @@ function getCategoryIcon(name: string): React.ElementType {
 // ─── Skeleton grid ────────────────────────────────────────────────────────────
 function ProductRowSkeleton() {
   return (
-    <div className="flex gap-[12px] overflow-hidden">
+    <div className="flex gap-[12px] overflow-hidden md:hidden">
       {[1, 2, 3].map((i) => (
         <div key={i} className="w-[160px] shrink-0 animate-pulse">
           <div className="h-[210px] rounded-[12px] bg-[#EAEAEA]" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ProductGridSkeleton() {
+  return (
+    <div className="hidden md:grid md:grid-cols-3 lg:grid-cols-4 gap-[16px]">
+      {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+        <div key={i} className="animate-pulse">
+          <div className="h-[260px] rounded-[12px] bg-[#EAEAEA]" />
         </div>
       ))}
     </div>
@@ -69,19 +81,22 @@ function ProductSection({
   return (
     <div>
       <div className="flex items-center justify-between mb-[12px]">
-        <span className="font-jakarta font-semibold text-[18px] text-[#151515] leading-[1.26] tracking-[-0.04em]">
+        <span className="font-jakarta font-semibold text-[18px] md:text-[20px] text-[#151515] leading-[1.26] tracking-[-0.04em]">
           {title}
         </span>
         <Link
           href={seeAllHref}
-          className="font-jakarta text-[12px] font-bold text-[#2E7D32] leading-[1.26] tracking-[-0.04em] underline"
+          className="font-jakarta text-[12px] md:text-[13px] font-bold text-[#2E7D32] leading-[1.26] tracking-[-0.04em] underline"
         >
           See all
         </Link>
       </div>
 
       {isLoading ? (
-        <ProductRowSkeleton />
+        <>
+          <ProductRowSkeleton />
+          <ProductGridSkeleton />
+        </>
       ) : products.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16">
           <ShoppingBag size={48} className="text-[#9B9B9B]" />
@@ -90,11 +105,20 @@ function ProductSection({
           </p>
         </div>
       ) : (
-        <div className="flex gap-[8px] overflow-x-auto [scrollbar-width:none] [-webkit-overflow-scrolling:touch]">
-          {products.map((p) => (
-            <ProductCard key={p.id} product={p} />
-          ))}
-        </div>
+        <>
+          {/* Mobile: horizontal scroll row */}
+          <div className="md:hidden flex gap-[8px] overflow-x-auto [scrollbar-width:none] [-webkit-overflow-scrolling:touch]">
+            {products.map((p) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
+          </div>
+          {/* Tablet/Desktop: grid */}
+          <div className="hidden md:grid md:grid-cols-3 lg:grid-cols-4 gap-[16px]">
+            {products.map((p) => (
+              <ProductCard key={p.id} product={p} className="w-full" />
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
@@ -148,25 +172,27 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-[#F7FFF8]">
+      {/* Mobile header (hidden on md+, NavBar takes over) */}
       <HomeHeader searchQuery={searchQuery} onSearchChange={setSearchQuery} />
 
-      <div className="px-[24px] pt-[20px] pb-[100px] flex flex-col gap-[24px]">
+
+<div className="px-[24px] md:px-6 lg:px-8 pt-[20px] pb-[100px] md:pb-[40px] flex flex-col gap-[24px] md:gap-[32px] max-w-[1280px] md:mx-auto">
 
         {/* ── Categories ── */}
         <div>
           <div className="flex items-center justify-between mb-[12px]">
-            <span className="font-jakarta font-semibold text-[18px] text-[#151515] leading-[1.26] tracking-[-0.04em]">
+            <span className="font-jakarta font-semibold text-[18px] md:text-[20px] text-[#151515] leading-[1.26] tracking-[-0.04em]">
               Categories
             </span>
             <Link
               href={ROUTES.CATEGORIES}
-              className="font-jakarta text-[12px] font-bold text-[#2E7D32] leading-[1.26] tracking-[-0.04em] underline"
+              className="font-jakarta text-[12px] md:text-[13px] font-bold text-[#2E7D32] leading-[1.26] tracking-[-0.04em] underline"
             >
               See all
             </Link>
           </div>
 
-          <div className="flex gap-[10px] overflow-x-auto [scrollbar-width:none] [-webkit-overflow-scrolling:touch]">
+          <div className="flex gap-[10px] overflow-x-auto [scrollbar-width:none] [-webkit-overflow-scrolling:touch] md:flex-wrap md:overflow-visible">
             {catsLoading
               ? [1, 2, 3, 4].map((i) => (
                   <div key={i} className="w-[91px] h-[30px] shrink-0 rounded-[5px] bg-[#EAEAEA] animate-pulse" />
@@ -177,10 +203,10 @@ export default function HomePage() {
                     <Link
                       key={cat.id}
                       href={`/categories/${cat.id}`}
-                      className="shrink-0 flex items-center gap-[10px] bg-[#D8FFDA] rounded-[5px] h-[30px] px-[10px]"
+                      className="shrink-0 flex items-center gap-[10px] bg-[#D8FFDA] rounded-[5px] h-[30px] px-[10px] hover:bg-[#c4f5c7] transition-colors md:h-[34px] md:px-[14px]"
                     >
                       <Icon size={14} className="text-[#2E7D32]" />
-                      <span className="font-satoshi font-medium text-[12px] text-[#2E7D32] leading-[1.35] tracking-[-0.04em] whitespace-nowrap">
+                      <span className="font-satoshi font-medium text-[12px] md:text-[13px] text-[#2E7D32] leading-[1.35] tracking-[-0.04em] whitespace-nowrap">
                         {cat.name}
                       </span>
                     </Link>

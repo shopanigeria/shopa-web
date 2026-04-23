@@ -36,7 +36,7 @@ export default function ScreenHeader({
 
   return (
     <div
-      className="px-6 pb-4 pt-[70px] rounded-b-3xl"
+      className="md:hidden px-6 pb-4 pt-[70px] rounded-b-3xl"
       style={{ backgroundColor }}
     >
       {searchVisible ? (

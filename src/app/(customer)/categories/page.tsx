@@ -282,7 +282,7 @@ export default function CategoriesPage() {
   };
 
   return (
-    <div className="flex flex-col bg-[#F7FFF8]" style={{ height: "100dvh" }}>
+    <div className="flex flex-col bg-[#F7FFF8] md:max-w-[1280px] md:mx-auto" style={{ height: "100dvh" }}>
 
       {/* Header */}
       <ScreenHeader
@@ -297,7 +297,7 @@ export default function CategoriesPage() {
       <div className="flex flex-1 flex-row overflow-hidden">
 
         {/* ── Left sidebar ── */}
-        <div className="bg-white shadow-[0_0_1px_rgba(0,0,0,0.25)] overflow-y-auto pb-[100px] w-[95px]">
+        <div className="bg-white shadow-[0_0_1px_rgba(0,0,0,0.25)] overflow-y-auto pb-[100px] w-[95px] md:w-[140px] lg:w-[180px]">
           {isLoading ? (
             Array.from({ length: 7 }).map((_, i) => (
               <div key={i} className="w-full flex flex-col items-center py-[24px] px-[8px] gap-[8px] animate-pulse">
@@ -366,7 +366,7 @@ export default function CategoriesPage() {
                       key={item.id}
                       type="button"
                       onClick={() => handleItemPress(item)}
-                      className="w-1/3 flex flex-col items-center mb-[16px] px-[4px]"
+                      className="w-1/3 md:w-1/4 lg:w-1/6 flex flex-col items-center mb-[16px] px-[4px] hover:opacity-80 transition-opacity"
                     >
                       <div className="w-full aspect-square bg-white rounded-[12px] mb-[8px] overflow-hidden flex items-center justify-center p-[8px] shadow-[0_0_1px_rgba(0,0,0,0.25)]">
                         <div className="relative w-full h-full">

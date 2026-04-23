@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { Check } from "lucide-react";
 import ScreenHeader from "@/components/layout/ScreenHeader";
+import BackButton from "@/components/layout/BackButton";
 import { useCartStore } from "@/stores/cart.store";
 import { ordersService } from "@/lib/api/services/orders.service";
 import { calculateServiceFee } from "@/lib/utils";
@@ -152,8 +153,12 @@ function CheckoutContent() {
     <div className="min-h-screen bg-[#F7FFF8]">
       <ScreenHeader title="Checkout" showBack />
 
-      <div className="flex flex-col" style={{ minHeight: "calc(100vh - 120px)" }}>
-        <div className="flex-1 px-[24px] pt-[24px] pb-[24px] overflow-y-auto">
+      <div className="md:max-w-[1280px] md:mx-auto md:px-6 lg:px-8 md:pt-[20px] md:pb-[48px] md:flex md:flex-col">
+        <BackButton label="Checkout" />
+      <div className="md:flex md:gap-[40px] md:items-start">
+
+        {/* ── Left: form fields ── */}
+        <div className="flex-1 px-[24px] md:px-0 pt-[24px] pb-[24px]">
 
           {/* Delivery Type */}
           <div className="mb-[24px]">
@@ -213,8 +218,38 @@ function CheckoutContent() {
           </div>
         </div>
 
-        {/* Price summary + CTA */}
-        <div className="px-[24px] pt-[16px] pb-[100px] bg-[#F7FFF8]">
+        {/* ── Right: price summary ── */}
+        {/* Desktop sidebar */}
+        <div className="hidden md:block md:w-[320px] lg:w-[360px] shrink-0">
+          <div className="bg-white rounded-[12px] border border-[#EAEAEA] p-[24px] sticky top-[80px]">
+            <h2 className="font-jakarta text-[16px] font-semibold text-[#151515] mb-[20px] tracking-[-0.04em]">
+              Order Summary
+            </h2>
+            <div className="flex items-center justify-between mb-[12px]">
+              <span className="font-jakarta text-[14px] text-[#333333] tracking-[-0.04em]">Subtotal</span>
+              <span className="font-jakarta text-[14px] font-bold text-[#333333] tracking-[-0.04em]">{formatNaira(subtotal)}</span>
+            </div>
+            <div className="flex items-center justify-between mb-[20px]">
+              <span className="font-jakarta text-[14px] text-[#9B9B9B] tracking-[-0.04em]">Service fee (7.5%)</span>
+              <span className="font-jakarta text-[14px] font-bold text-[#333333] tracking-[-0.04em]">{formatNaira(fee)}</span>
+            </div>
+            <div className="flex items-center justify-between pt-[16px] border-t border-[#EAEAEA] mb-[24px]">
+              <span className="font-jakarta text-[14px] font-bold text-[#151515] tracking-[-0.04em]">TOTAL</span>
+              <span className="font-jakarta text-[16px] font-bold text-[#151515] tracking-[-0.04em]">{formatNaira(total)}</span>
+            </div>
+            <button
+              type="button"
+              onClick={handleMakePayment}
+              disabled={isProcessing}
+              className="w-full h-[53px] rounded-[8px] bg-[#2E7D32] font-jakarta text-[14px] font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#1D5620] transition-colors tracking-[-0.04em]"
+            >
+              {isProcessing ? "Processing..." : "Make Payment"}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile: price summary + CTA at bottom */}
+        <div className="md:hidden px-[24px] pt-[16px] pb-[100px] bg-[#F7FFF8]">
           <div className="mb-[16px]">
             <div className="flex items-center justify-between mb-[10px]">
               <span className="font-jakarta text-[12px] text-[#333333] tracking-[-0.04em]">Subtotal</span>
@@ -229,7 +264,6 @@ function CheckoutContent() {
               <span className="font-jakarta text-[12px] font-bold text-[#333333] tracking-[-0.04em]">{formatNaira(total)}</span>
             </div>
           </div>
-
           <button
             type="button"
             onClick={handleMakePayment}
@@ -239,6 +273,8 @@ function CheckoutContent() {
             {isProcessing ? "Processing..." : "Make Payment"}
           </button>
         </div>
+
+      </div>
       </div>
     </div>
   );

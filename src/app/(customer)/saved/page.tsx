@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { X, ShoppingBag, Minus, Plus } from "lucide-react";
 import ScreenHeader from "@/components/layout/ScreenHeader";
+import BackButton from "@/components/layout/BackButton";
 import { useSavedItemsStore } from "@/stores/savedItems.store";
 import { useCartStore } from "@/stores/cart.store";
 import { productsService } from "@/lib/api/services/products.service";
@@ -55,8 +56,9 @@ export default function SavedItemsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F7FFF8]">
+    <div className="min-h-screen bg-[#F7FFF8] md:max-w-[1280px] md:mx-auto">
       <ScreenHeader title="Saved Items" showBack />
+      <div className="md:px-6 lg:px-8 md:pt-[20px]"><BackButton label="Saved Items" /></div>
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
@@ -76,7 +78,7 @@ export default function SavedItemsPage() {
           </Link>
         </div>
       ) : (
-        <div className="px-[24px] pt-[24px] pb-[100px] flex flex-col gap-[16px]">
+        <div className="px-[24px] md:px-6 lg:px-8 pt-[24px] pb-[100px] md:pb-[40px] grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[16px]">
           {products.map((item) => {
             const img = item.imageUrls?.[0];
             const qty = quantities[item.id] ?? 1;

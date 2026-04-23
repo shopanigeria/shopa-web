@@ -1,0 +1,16 @@
+SECTION 7 — Vouchers, Referrals, Help & Support, Terms
+Vouchers (/vouchers/page.tsx)
+46. Empty state icon — code renders a Lucide Ticket icon; Figma shows no icon, just the text centered on the page
+
+Referrals (/referrals/page.tsx)
+47. Illustration — Figma shows a specific illustration of two people exchanging gifts with fireworks; code uses a plain Lucide Gift icon — major visual difference
+48. Referral text — code shows "Refer friends and earn rewards!"; Figma shows no subtitle text, just the illustration + button
+49. Referral link — code has a hardcoded fake URL "https://shoppa.ng/ref/esther123"; should pull from user profile/API
+
+Help & Support (/help/page.tsx)
+50. "Need help?" heading font — code uses text-[22px] font-bold; Figma matches closer to H2 Mobile text-[20px] font-bold
+51. Email label text — code shows "Send us an email" (lowercase 's'); Figma shows "Send us an email" ✅ — matches
+
+Terms & Policies (/terms/page.tsx)
+52. Content — Figma shows a blank/empty Terms page (just the header, no body text); code has placeholder terms text — the actual terms content is missing/pending
+

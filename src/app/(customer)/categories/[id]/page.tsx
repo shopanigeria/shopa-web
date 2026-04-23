@@ -6,6 +6,7 @@ import { Package } from "lucide-react";
 import { useCategories, useProducts } from "@/hooks/useProducts";
 import ProductCard from "@/components/customer/ProductCard";
 import ScreenHeader from "@/components/layout/ScreenHeader";
+import BackButton from "@/components/layout/BackButton";
 import { cn } from "@/lib/utils";
 
 type SortOption =
@@ -53,7 +54,7 @@ function CategoryContent() {
     : allProducts;
 
   return (
-    <div className="min-h-screen bg-[#F7FFF8]">
+    <div className="min-h-screen bg-[#F7FFF8] md:max-w-[1280px] md:mx-auto">
 
       {/* Header */}
       <ScreenHeader
@@ -65,6 +66,9 @@ function CategoryContent() {
         searchPlaceholder="Search in category..."
         showCart
       />
+      <div className="md:px-6 lg:px-8 md:pt-[20px]">
+        <BackButton label={category?.name ?? "Category"} />
+      </div>
 
       {/* Sort Button */}
       <div className="px-[24px] py-[16px]">
@@ -135,7 +139,7 @@ function CategoryContent() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-[16px]">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-[16px]">
             {products.map((product) => (
               <ProductCard key={product.id} product={product} className="w-full" />
             ))}

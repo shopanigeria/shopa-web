@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 
 export default function AuthFullLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="h-dvh bg-primary-dark relative overflow-hidden">
+    <div className="min-h-screen bg-primary-dark relative overflow-x-hidden">
       {/* Background SVG pattern */}
       <div className="absolute inset-0 pointer-events-none select-none">
         <Image
@@ -19,11 +19,24 @@ export default function AuthFullLayout({ children }: { children: React.ReactNode
         />
       </div>
 
-      {/* On mobile: full-width column. On desktop: centred phone-frame */}
-      <div className="relative z-10 flex flex-col justify-end h-full w-full md:max-w-[430px] md:mx-auto">
-        {/* White card — anchored to bottom, scrollable if content overflows */}
-        <div className="bg-white rounded-t-[24px] animate-slide-up max-h-[calc(100dvh-54px)] overflow-y-auto">
-          <div className="px-[24px] pt-[38px] pb-[38px]">
+      {/* Mobile: single column. Tablet/Desktop: side-by-side */}
+      <div className="relative z-10 min-h-screen flex flex-col md:flex-row">
+
+        {/* Left branding panel */}
+        <div className="flex items-center justify-center min-h-[160px] py-8 md:flex-1 md:min-h-screen md:py-0">
+          <Image
+            src="/images/logo.svg"
+            alt="Shopa"
+            width={160}
+            height={60}
+            priority
+            className="md:w-[200px] md:h-auto"
+          />
+        </div>
+
+        {/* Right form card — scrollable on mobile, centered on desktop */}
+        <div className="bg-white rounded-t-[24px] md:rounded-none md:rounded-l-[32px] animate-slide-up md:animate-none shrink-0 md:w-[480px] lg:w-[520px] md:min-h-screen md:flex md:items-center md:shadow-[-8px_0_32px_rgba(0,0,0,0.15)] overflow-y-auto">
+          <div className="px-[24px] md:px-[48px] lg:px-[64px] pt-[38px] pb-[38px] w-full">
             {children}
           </div>
         </div>

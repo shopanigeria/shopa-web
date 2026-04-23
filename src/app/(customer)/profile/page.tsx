@@ -34,38 +34,57 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-[#F7FFF8]">
       <ScreenHeader title="Profile" />
 
-      <div className="pb-[100px]">
-        {/* User info */}
-        <div className="px-[24px] py-[24px]">
-          <p className="font-jakarta text-[18px] font-semibold text-[#333333] mb-[4px] leading-[1.26] tracking-[-0.04em]">
-            Hello, {user?.firstName ?? "there"}!
-          </p>
-          <p className="font-jakarta text-[14px] text-[#9B9B9B] tracking-[-0.04em]">
-            {user?.email ?? ""}
-          </p>
-        </div>
+      <div className="pb-[100px] md:pb-[40px] md:max-w-[1280px] md:mx-auto md:px-6 lg:px-8 md:pt-[32px]">
+        <div className="md:flex md:gap-[40px] md:items-start">
 
-        {/* Menu items */}
-        <div className="px-[24px]">
-          {menuItems.map(({ Icon, label, href }) => (
-            <Link
-              key={label}
-              href={href}
-              className="flex items-center py-[16px] border-b border-[#F7FFF8] last:border-0"
-            >
-              <div className="w-[32px] mr-[8px] flex items-center">
-                <Icon size={22} className="text-[#333333]" />
+          {/* Left: user info + sign out */}
+          <div className="md:w-[280px] md:shrink-0">
+            <div className="px-[24px] md:px-0 py-[24px] md:py-0 md:mb-[24px]">
+              <div className="md:w-[80px] md:h-[80px] md:rounded-full md:bg-[#D8FFDA] md:flex md:items-center md:justify-center md:mb-[16px]">
+                <span className="hidden md:block font-jakarta text-[28px] font-bold text-[#2E7D32]">
+                  {(user?.firstName ?? "U")[0].toUpperCase()}
+                </span>
               </div>
-              <span className="font-jakarta text-[14px] font-medium text-[#545454] tracking-[-0.04em]">{label}</span>
-            </Link>
-          ))}
+              <p className="font-jakarta text-[18px] md:text-[20px] font-semibold text-[#333333] mb-[4px] leading-[1.26] tracking-[-0.04em]">
+                Hello, {user?.firstName ?? "there"}!
+              </p>
+              <p className="font-jakarta text-[14px] text-[#9B9B9B] tracking-[-0.04em]">
+                {user?.email ?? ""}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="hidden md:flex items-center gap-[8px] mt-[24px] px-0 hover:opacity-70 transition-opacity"
+            >
+              <LogOut size={20} className="text-[#FDC500]" />
+              <span className="font-jakarta text-[14px] font-semibold text-[#FDC500] tracking-[-0.04em]">SIGN OUT</span>
+            </button>
+          </div>
+
+          {/* Right: menu items */}
+          <div className="flex-1 px-[24px] md:px-0 md:bg-white md:rounded-[12px] md:border md:border-[#EAEAEA] md:overflow-hidden">
+            {menuItems.map(({ Icon, label, href }) => (
+              <Link
+                key={label}
+                href={href}
+                className="flex items-center py-[16px] border-b border-[#EAEAEA] last:border-0 md:px-[20px] hover:bg-[#F7FFF8] md:transition-colors"
+              >
+                <div className="w-[32px] mr-[8px] flex items-center">
+                  <Icon size={22} className="text-[#333333]" />
+                </div>
+                <span className="font-jakarta text-[14px] font-medium text-[#545454] tracking-[-0.04em]">{label}</span>
+              </Link>
+            ))}
+          </div>
         </div>
 
-        {/* Sign out */}
+        {/* Sign out — mobile only */}
         <button
           type="button"
           onClick={handleLogout}
-          className="flex items-center justify-center gap-[8px] mt-[32px] mb-[32px] w-full"
+          className="md:hidden flex items-center justify-center gap-[8px] mt-[32px] mb-[32px] w-full"
         >
           <LogOut size={24} className="text-[#FDC500]" />
           <span className="font-jakarta text-[18px] font-semibold text-[#FDC500] tracking-[-0.04em]">SIGN OUT</span>
