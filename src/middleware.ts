@@ -48,6 +48,39 @@ function getRoleFromToken(token: string): string | null {
   }
 }
 
+// ─── Subdomain role restriction ─────────────────────────────────────────────
+const CUSTOMER_ROUTES = ["/home", "/categories", "/products", "/cart", "/checkout", "/orders", "/profile", "/saved", "/vouchers", "/referrals", "/help", "/terms", "/disputes", "/account-settings", "/referrals"];
+
+function enforceAppRole(pathname: string, loginUrl: URL): NextResponse | null {
+  const appRole = process.env.NEXT_PUBLIC_APP_ROLE;
+  if (!appRole) return null; // No restriction — monorepo / local dev
+
+  const isVendorRoute = VENDOR_ROUTES.some((r) => pathname.startsWith(r));
+  const isAdminRoute = ADMIN_ROUTES.some((r) => pathname.startsWith(r));
+  const isSuperAdminRoute = SUPER_ADMIN_ROUTES.some((r) => pathname.startsWith(r));
+  const isCustomerRoute = CUSTOMER_ROUTES.some((r) => pathname.startsWith(r));
+
+  switch (appRole) {
+    case "customer":
+      if (isVendorRoute || isAdminRoute || isSuperAdminRoute)
+        return NextResponse.redirect(loginUrl);
+      break;
+    case "vendor":
+      if (isCustomerRoute || isAdminRoute || isSuperAdminRoute)
+        return NextResponse.redirect(loginUrl);
+      break;
+    case "admin":
+      if (isCustomerRoute || isVendorRoute || isSuperAdminRoute)
+        return NextResponse.redirect(loginUrl);
+      break;
+    case "superadmin":
+      if (isCustomerRoute || isVendorRoute || isAdminRoute)
+        return NextResponse.redirect(loginUrl);
+      break;
+  }
+  return null;
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -61,6 +94,11 @@ export function middleware(request: NextRequest) {
   ) {
     return NextResponse.next();
   }
+
+  // Enforce subdomain role restrictions before anything else
+  const loginUrl = new URL("/login", request.url);
+  const roleBlock = enforceAppRole(pathname, loginUrl);
+  if (roleBlock) return roleBlock;
 
   // Dev-only: mock session bypasses token check
   const isMockVendor = request.cookies.get("shopa_mock_vendor")?.value === "1";
