@@ -25,8 +25,8 @@ export default function ForgotPasswordPage() {
     try {
       await authService.forgotPassword(data.email);
       setIsSubmitted(true);
-    } catch (err: any) {
-      setError(err?.response?.data?.message ?? "Something went wrong. Please try again.");
+    } catch (err: unknown) {
+      setError((err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }

@@ -31,8 +31,8 @@ function ResetPasswordForm() {
     try {
       await authService.resetPassword(token, data.password);
       setIsSuccess(true);
-    } catch (err: any) {
-      setError(err?.response?.data?.message ?? "Something went wrong.");
+    } catch (err: unknown) {
+      setError((err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Something went wrong.");
     } finally {
       setIsLoading(false);
     }

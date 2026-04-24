@@ -53,7 +53,8 @@ function LoginForm() {
   };
 
   const errorMessage =
-    (loginError as any)?.response?.data?.message ?? (loginError as any)?.message;
+    (loginError as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message ??
+    (loginError as { message?: string })?.message;
 
   if (isVerified) {
     return (
@@ -165,6 +166,22 @@ function LoginForm() {
         Don&apos;t have an account yet?{" "}
         <Link href="/signup" className="text-[#FDC500] font-semibold underline">
           Sign up here
+        </Link>
+      </p>
+
+      {/* Vendor login link */}
+      <p className="text-center text-[13px] font-medium tracking-[-0.04em] leading-[28px] text-[#9B9B9B] mt-[4px]">
+        Are you a vendor?{" "}
+        <Link href="/vendor/login" className="text-[#2E7D32] font-semibold underline">
+          Vendor Login
+        </Link>
+      </p>
+
+      {/* Admin login link */}
+      <p className="text-center text-[13px] font-medium tracking-[-0.04em] leading-[28px] text-[#9B9B9B] mt-[2px]">
+        Are you a campus admin?{" "}
+        <Link href="/admin/mock-login" className="text-[#2E7D32] font-semibold underline">
+          Admin Login
         </Link>
       </p>
     </div>

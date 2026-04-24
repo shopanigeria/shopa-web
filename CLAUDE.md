@@ -482,3 +482,97 @@ Use this as the source of truth for UI and business logic when converting screen
 - After dispute window expires, customer can no longer raise disputes on that order
 - Withdrawal requests go to admin for manual processing
 - Minimum withdrawal amount: ₦500
+
+## Responsiveness Rules
+
+Apply these breakpoints to every screen built:
+
+| Breakpoint | Width | Layout |
+|---|---|---|
+| Mobile (default) | 320px - 767px | Single column, bottom nav visible |
+| Tablet (md:) | 768px - 1023px | Two columns where appropriate, top nav |
+| Desktop (lg:) | 1024px+ | Wide layout, sidebar nav, no bottom nav |
+
+### Navigation
+- Mobile: fixed bottom navigation bar (`md:hidden`)
+- Tablet & Desktop: top navigation bar (`hidden md:flex`)
+- Vendor dashboard: left sidebar nav on tablet/desktop
+
+### Layout Rules
+- Mobile: `max-w-[390px] mx-auto` — centered mobile layout
+- Tablet/Desktop: remove max-width constraint, use full width with padding
+- All containers: `px-4 md:px-6 lg:px-8`
+
+### Grids
+- Product grids: `grid-cols-2 md:grid-cols-3 lg:grid-cols-4`
+- Dashboard stat cards: `grid-cols-1 md:grid-cols-2 lg:grid-cols-4`
+- Form layouts: full width on mobile, `max-w-lg` centered on desktop
+
+### Typography
+- Scale up slightly on larger screens: `text-[14px] md:text-[15px] lg:text-[16px]`
+
+### Hover States (desktop only)
+- Add `hover:` states on all clickable elements at `lg:` breakpoint
+- Cards: `lg:hover:shadow-md lg:hover:scale-[1.02] transition-all`
+- Buttons: `hover:opacity-90 transition-opacity`
+
+### Auth Pages
+- Mobile: full screen green + white card layout (current)
+- Tablet/Desktop: split layout — green branding panel left, form right
+
+### Vendor Dashboard Specific
+- Mobile: bottom tab navigation for vendor sections
+- Tablet/Desktop: fixed left sidebar with vendor nav items
+- Dashboard stats: stacked on mobile, grid on desktop
+- Orders/Products tables: card view on mobile, full table on desktop
+
+### SubCategories — `/categories/:id/subcategories`
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/categories/:id/subcategories` | Get subcategories for a category |
+| POST | `/categories/:id/subcategories` | Create subcategory (admin only) — body: { name } |
+| DELETE | `/categories/subcategories/:id` | Delete subcategory (admin only) |
+
+---
+
+## Admin Dashboard — University Admin
+Role: `ADMIN` · Base path: `src/app/(admin)/admin/`
+Layout: `src/components/admin/AdminLayout.tsx` — left sidebar on desktop, bottom nav on mobile
+
+| Screen | File path | Description |
+|---|---|---|
+| Overview | `src/app/(admin)/admin/dashboard/page.tsx` | Stats, pending applications, recent disputes |
+| Vendor Management | `src/app/(admin)/admin/vendors/page.tsx` | List, search, filter, approve/reject/deletion-request |
+| Vendor Detail | `src/app/(admin)/admin/vendors/[id]/page.tsx` | Full profile, products, actions |
+| Disputes | `src/app/(admin)/admin/disputes/page.tsx` | All campus disputes, filter by status |
+| Dispute Detail | `src/app/(admin)/admin/disputes/[id]/page.tsx` | Full detail, resolve, escalate |
+| Students | `src/app/(admin)/admin/students/page.tsx` | All campus students, search, verification status |
+
+---
+
+## Super Admin Dashboard
+Role: `SUPER_ADMIN` · Base path: `src/app/(superadmin)/superadmin/`
+Layout: `src/components/admin/SuperAdminLayout.tsx` — dark green sidebar (#1D5620), desktop-only, no mobile
+
+| Screen | File path | Description |
+|---|---|---|
+| Dashboard | `src/app/(superadmin)/superadmin/dashboard/page.tsx` | Platform stats, pending actions banner, activity feed |
+| Analytics | `src/app/(superadmin)/superadmin/analytics/page.tsx` | Revenue, fees, per-university breakdown, top vendors/categories |
+| Universities | `src/app/(superadmin)/superadmin/universities/page.tsx` | List campuses, add new, toggle active |
+| University Detail | `src/app/(superadmin)/superadmin/universities/[id]/page.tsx` | Campus stats, admins, invite admin, vendors, students |
+| Admins | `src/app/(superadmin)/superadmin/admins/page.tsx` | All campus admins, suspend/reactivate |
+| Vendors | `src/app/(superadmin)/superadmin/vendors/page.tsx` | All vendors, override approve/reject/suspend |
+| Deletion Requests | `src/app/(superadmin)/superadmin/vendors/deletion-requests/page.tsx` | Process vendor deletion requests from campus admins |
+| Orders | `src/app/(superadmin)/superadmin/orders/page.tsx` | All orders platform-wide, filter by status |
+| Order Detail | `src/app/(superadmin)/superadmin/orders/[id]/page.tsx` | Full order + payment info, read-only |
+| Disputes | `src/app/(superadmin)/superadmin/disputes/page.tsx` | All disputes including escalated, resolve platform-wide |
+| Withdrawals | `src/app/(superadmin)/superadmin/withdrawals/page.tsx` | All withdrawal requests, approve/reject |
+| Students | `src/app/(superadmin)/superadmin/students/page.tsx` | All students platform-wide, suspend/reactivate |
+
+### Shared Admin Components (`src/components/admin/`)
+- `StatsCard.tsx` — icon + label + value + optional trend chip
+- `DataTable.tsx` — search + filter dropdowns + pagination + row click handler
+- `StatusBadge.tsx` — colour-coded badge for all statuses (vendor, dispute, order, user)
+- `ConfirmModal.tsx` — reusable confirm/action modal with optional reason textarea
+- `AdminLayout.tsx` — university admin layout (sidebar + top bar + mobile bottom nav)
+- `SuperAdminLayout.tsx` — super admin layout (dark sidebar + top bar, desktop only)

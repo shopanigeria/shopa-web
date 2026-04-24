@@ -79,7 +79,7 @@ export default function CartPage() {
                           </button>
                         </div>
                         <p className="mt-[4px] font-jakarta text-[12px] text-[#9B9B9B] tracking-[-0.04em]">
-                          {(item.product as any).vendor?.storeName ?? ""}
+                          {(item.product as { vendor?: { storeName?: string } }).vendor?.storeName ?? ""}
                         </p>
                       </div>
 

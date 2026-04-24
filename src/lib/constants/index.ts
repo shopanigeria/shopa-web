@@ -26,6 +26,10 @@ export const ROUTES = {
   DISPUTES_NEW: "/disputes/new",
 
   // Vendor
+  VENDOR_LOGIN: "/vendor/login",
+  VENDOR_SIGNUP: "/vendor/signup",
+  VENDOR_FORGOT_PASSWORD: "/vendor/forgot-password",
+  VENDOR_RESET_PASSWORD: "/vendor/reset-password",
   VENDOR_DASHBOARD: "/vendor/dashboard",
   VENDOR_PRODUCTS: "/vendor/products",
   VENDOR_ORDERS: "/vendor/orders",

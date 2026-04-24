@@ -64,12 +64,12 @@ export default function ProfilePage() {
           </div>
 
           {/* Right: menu items */}
-          <div className="flex-1 px-[24px] md:px-0 md:bg-white md:rounded-[12px] md:border md:border-[#EAEAEA] md:overflow-hidden">
+          <div className="flex-1 px-[24px] md:px-0 md:bg-white md:rounded-[12px] md:border md:border-[#F7FFF8] md:overflow-hidden">
             {menuItems.map(({ Icon, label, href }) => (
               <Link
                 key={label}
                 href={href}
-                className="flex items-center py-[16px] border-b border-[#EAEAEA] last:border-0 md:px-[20px] hover:bg-[#F7FFF8] md:transition-colors"
+                className="flex items-center py-[16px] border-b border-[#F7FFF8] last:border-0 md:px-[20px] hover:bg-[#F7FFF8] md:transition-colors"
               >
                 <div className="w-[32px] mr-[8px] flex items-center">
                   <Icon size={22} className="text-[#333333]" />

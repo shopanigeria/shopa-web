@@ -29,6 +29,8 @@ export default function AccountSettingsPage() {
         phoneNumber: data.phone ?? "",
       });
     }).catch(() => {/* silently use cached user */});
+  // setUser is a stable Zustand setter — intentionally omitted from deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSave = async () => {
