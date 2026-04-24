@@ -121,7 +121,6 @@ function OrderTimeline({ steps }: { steps: Step[] }) {
           ? "text-[#2E7D32]"
           : "text-[#9B9B9B]";
 
-        const topLineClass = isActive ? (step.rejected ? "bg-red-500" : "bg-[#2E7D32]") : "bg-[#EAEAEA]";
         const bottomLineClass = step.completed ? (step.rejected ? "bg-red-500" : "bg-[#2E7D32]") : "bg-[#EAEAEA]";
 
         return (

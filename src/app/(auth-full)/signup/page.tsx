@@ -11,6 +11,8 @@ import { apiClient } from "@/lib/api";
 import SuccessModal from "@/components/shared/SuccessModal";
 import { toast } from "sonner";
 
+const FALLBACK_CAMPUSES: { id: string; name: string }[] = [{ id: "", name: "Crawford University" }];
+
 interface Campus {
   id: string;
   name: string;
@@ -27,8 +29,6 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const router = useRouter();
-
-  const FALLBACK_CAMPUSES: Campus[] = [{ id: "", name: "Crawford University" }];
 
   useEffect(() => {
     const controller = new AbortController();
@@ -82,8 +82,8 @@ export default function SignupPage() {
       };
       await apiClient.post("/auth/register", payload);
       setShowSuccess(true);
-    } catch (err: any) {
-      setError(err?.response?.data?.message ?? "Something went wrong. Please try again.");
+    } catch (err: unknown) {
+      setError((err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }

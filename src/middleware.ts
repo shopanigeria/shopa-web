@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { jwtDecode } from "jwt-decode";
 
 // ─── Route definitions ───────────────────────────────────────────────────────
-const PUBLIC_ROUTES = ["/", "/login", "/signup", "/forgot-password", "/reset-password"];
+const PUBLIC_ROUTES = ["/", "/login", "/signup", "/forgot-password", "/reset-password", "/vendor/login", "/vendor/signup", "/vendor/forgot-password", "/vendor/reset-password", "/vendor/mock-login", "/admin/mock-login", "/superadmin/mock-login"];
 const VENDOR_ROUTES = ["/vendor"];
 const ADMIN_ROUTES = ["/admin"];
 const SUPER_ADMIN_ROUTES = ["/superadmin"];
@@ -60,6 +60,20 @@ export function middleware(request: NextRequest) {
     pathname.includes(".")
   ) {
     return NextResponse.next();
+  }
+
+  // Dev-only: mock session bypasses token check
+  const isMockVendor = request.cookies.get("shopa_mock_vendor")?.value === "1";
+  if (isMockVendor && process.env.NODE_ENV === "development") {
+    if (VENDOR_ROUTES.some((r) => pathname.startsWith(r))) return NextResponse.next();
+  }
+  const isMockAdmin = request.cookies.get("shopa_mock_admin")?.value === "1";
+  if (isMockAdmin && process.env.NODE_ENV === "development") {
+    if (ADMIN_ROUTES.some((r) => pathname.startsWith(r))) return NextResponse.next();
+  }
+  const isMockSuperAdmin = request.cookies.get("shopa_mock_superadmin")?.value === "1";
+  if (isMockSuperAdmin && process.env.NODE_ENV === "development") {
+    if (SUPER_ADMIN_ROUTES.some((r) => pathname.startsWith(r))) return NextResponse.next();
   }
 
   const token = getTokenFromRequest(request);

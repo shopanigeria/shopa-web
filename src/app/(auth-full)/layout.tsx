@@ -22,8 +22,8 @@ export default function AuthFullLayout({ children }: { children: React.ReactNode
       {/* Mobile: single column. Tablet/Desktop: side-by-side */}
       <div className="relative z-10 min-h-screen flex flex-col md:flex-row">
 
-        {/* Left branding panel */}
-        <div className="flex items-center justify-center min-h-[160px] py-8 md:flex-1 md:min-h-screen md:py-0">
+        {/* Logo area */}
+        <div className="flex-1 flex items-center justify-center py-8 md:min-h-screen md:py-0">
           <Image
             src="/images/logo.svg"
             alt="Shopa"
@@ -34,9 +34,9 @@ export default function AuthFullLayout({ children }: { children: React.ReactNode
           />
         </div>
 
-        {/* Right form card — scrollable on mobile, centered on desktop */}
-        <div className="bg-white rounded-t-[24px] md:rounded-none md:rounded-l-[32px] animate-slide-up md:animate-none shrink-0 md:w-[480px] lg:w-[520px] md:min-h-screen md:flex md:items-center md:shadow-[-8px_0_32px_rgba(0,0,0,0.15)] overflow-y-auto">
-          <div className="px-[24px] md:px-[48px] lg:px-[64px] pt-[38px] pb-[38px] w-full">
+        {/* Form card — pinned to bottom on mobile, side panel on desktop */}
+        <div className="mt-auto md:mt-0 bg-white rounded-t-[24px] md:rounded-none md:rounded-l-[32px] animate-slide-up md:animate-none md:w-[480px] lg:w-[520px] md:min-h-screen md:flex md:items-center md:shadow-[-8px_0_32px_rgba(0,0,0,0.15)] overflow-y-auto">
+          <div className="px-[24px] md:px-[48px] lg:px-[64px] pt-[38px] pb-[32px] w-full">
             {children}
           </div>
         </div>
