@@ -5,6 +5,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Package, ClipboardList, Headphones, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 const NAV_TABS = [
   { label: "Dashboard", href: "/vendor/dashboard", Icon: LayoutDashboard },
@@ -16,6 +17,7 @@ const NAV_TABS = [
 
 export default function VendorLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  usePushNotifications();
 
   return (
     <div className="min-h-screen bg-[#F7FFF8] flex">
