@@ -32,14 +32,33 @@ export function useAuth() {
     onSuccess: (data) => {
       setUser(data.user);
       queryClient.setQueryData(QUERY_KEYS.USER, data.user);
-      // Redirect based on role
-      const roleRoutes: Record<string, string> = {
-        customer: ROUTES.HOME,
-        vendor: ROUTES.VENDOR_DASHBOARD,
-        admin: ROUTES.ADMIN_DASHBOARD,
+
+      const role = data.user.role as string;
+
+      // In production, each role lives on its own subdomain.
+      // window.location.href is required for cross-subdomain navigation
+      // since router.push cannot cross domain boundaries.
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+      const crossDomainRoutes: Record<string, string> = {
+        customer:    `${appUrl}/home`,
+        vendor:      "https://vendor.shopshopa.com.ng/vendor/dashboard",
+        admin:       "https://uadmin.shopshopa.com.ng/admin/dashboard",
+        super_admin: "https://sadmin.shopshopa.com.ng/superadmin/dashboard",
+      };
+
+      // In development / monorepo, all roles share the same origin.
+      const sameDomainRoutes: Record<string, string> = {
+        customer:    ROUTES.HOME,
+        vendor:      ROUTES.VENDOR_DASHBOARD,
+        admin:       ROUTES.ADMIN_DASHBOARD,
         super_admin: ROUTES.SUPERADMIN_DASHBOARD,
       };
-      router.push(roleRoutes[data.user.role] ?? ROUTES.HOME);
+
+      if (process.env.NODE_ENV === "production" && crossDomainRoutes[role]) {
+        window.location.href = crossDomainRoutes[role];
+      } else {
+        router.push(sameDomainRoutes[role] ?? ROUTES.HOME);
+      }
     },
   });
 
