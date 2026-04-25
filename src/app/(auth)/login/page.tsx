@@ -16,6 +16,10 @@ const REMEMBER_PASSWORD_KEY = "shopa_remembered_password";
 
 const APP_ROLE = process.env.NEXT_PUBLIC_APP_ROLE;
 
+// Subdomain URLs — used for cross-domain links in production
+const VENDOR_URL = process.env.NEXT_PUBLIC_VENDOR_URL ?? "https://vendor.shopshopa.com.ng";
+const isProd = process.env.NODE_ENV === "production";
+
 // ── Role-aware copy ───────────────────────────────────────────────────────────
 
 const PORTAL_CONFIG = {
@@ -33,7 +37,7 @@ const PORTAL_CONFIG = {
     subtitle: "Sign in to your vendor dashboard",
     emailLabel: "Email",
     emailPlaceholder: "Enter your vendor email",
-    showSignUpLink: false,
+    showSignUpLink: true,   // vendor subdomain shows its own signup
     showVendorLink: false,
     showAdminLink: false,
   },
@@ -218,19 +222,36 @@ function LoginForm() {
         )}
       </button>
 
-      {/* Customer-only links */}
+      {/* Sign-up link — context-aware per portal */}
       {config.showSignUpLink && (
-        <p className="text-center text-[14px] font-medium tracking-[-0.56px] leading-[28px] text-[#151515]">
-          Don&apos;t have an account yet?{" "}
-          <Link href="/signup" className="text-[#FDC500] font-semibold underline">Sign up here</Link>
-        </p>
+        APP_ROLE === "vendor" ? (
+          // Vendor portal: /vendor/signup is the vendor registration flow
+          <p className="text-center text-[14px] font-medium tracking-[-0.56px] leading-[28px] text-[#151515]">
+            Don&apos;t have a vendor account?{" "}
+            <Link href="/vendor/signup" className="text-[#FDC500] font-semibold underline">Sign up here</Link>
+          </p>
+        ) : (
+          // Customer portal: standard customer signup
+          <p className="text-center text-[14px] font-medium tracking-[-0.56px] leading-[28px] text-[#151515]">
+            Don&apos;t have an account yet?{" "}
+            <Link href="/signup" className="text-[#FDC500] font-semibold underline">Sign up here</Link>
+          </p>
+        )
       )}
+
+      {/* Vendor Login — crosses to vendor subdomain in production */}
       {config.showVendorLink && (
         <p className="text-center text-[13px] font-medium tracking-[-0.04em] leading-[28px] text-[#9B9B9B] mt-[4px]">
           Are you a vendor?{" "}
-          <Link href="/vendor/login" className="text-[#2E7D32] font-semibold underline">Vendor Login</Link>
+          <a
+            href={isProd ? `${VENDOR_URL}/login` : "/vendor/login"}
+            className="text-[#2E7D32] font-semibold underline"
+          >
+            Vendor Login
+          </a>
         </p>
       )}
+
       {config.showAdminLink && (
         <p className="text-center text-[13px] font-medium tracking-[-0.04em] leading-[28px] text-[#9B9B9B] mt-[2px]">
           Are you a campus admin?{" "}
