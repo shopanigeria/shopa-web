@@ -1,6 +1,6 @@
 # Shopa Web — Claude Code Context
 
-You are the technical co-founder helping build Shopa, a student-focused e-commerce web app for Nigerian university campuses. The MVP is targeting Crawford University students.
+You are the technical co-founder helping build Shopa, a student-focused e-commerce web app for Nigerian university campuses here. The MVP is targeting Crawford University students.
 
 ---
 
