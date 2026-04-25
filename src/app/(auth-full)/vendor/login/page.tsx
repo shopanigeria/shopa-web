@@ -152,12 +152,15 @@ function VendorLoginForm() {
         </button>
       </form>
 
-      <p className="text-center text-[14px] font-medium tracking-[-0.04em] leading-[28px] text-[#151515] mt-[10px]">
-        Don&apos;t have a vendor account?{" "}
-        <Link href="/vendor/signup" className="text-[#FDC500] font-semibold underline">
-          Sign up here
-        </Link>
-      </p>
+      {/* Sign-up link only shown in dev/monorepo — hidden on the vendor subdomain */}
+      {process.env.NEXT_PUBLIC_APP_ROLE !== "vendor" && (
+        <p className="text-center text-[14px] font-medium tracking-[-0.04em] leading-[28px] text-[#151515] mt-[10px]">
+          Don&apos;t have a vendor account?{" "}
+          <Link href="/vendor/signup" className="text-[#FDC500] font-semibold underline">
+            Sign up here
+          </Link>
+        </p>
+      )}
 
       <p className="text-center text-[13px] font-medium tracking-[-0.04em] leading-[28px] text-[#9B9B9B] mt-[4px]">
         Are you a customer?{" "}

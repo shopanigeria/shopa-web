@@ -42,10 +42,11 @@ export function useAuth() {
       const role = data.user.role as string; // e.g. "STUDENT", "VENDOR", "ADMIN", "SUPER_ADMIN"
       const appRole = process.env.NEXT_PUBLIC_APP_ROLE; // e.g. "customer", "vendor", "admin", "superadmin"
 
-      // If APP_ROLE is set, verify this user belongs to this portal
+      // If APP_ROLE is set, verify this user belongs to this portal.
+      // Normalise both sides to uppercase so "student" == "STUDENT" etc.
       if (appRole) {
         const expectedRole = PORTAL_ROLE_MAP[appRole];
-        if (expectedRole && role !== expectedRole) {
+        if (expectedRole && role.toUpperCase() !== expectedRole.toUpperCase()) {
           // Wrong portal — clear the token and show an error, do NOT redirect
           tokenStorage.clearTokens();
           setPortalError("You don't have access to this portal.");
