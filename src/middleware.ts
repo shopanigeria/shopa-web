@@ -8,10 +8,12 @@ const VENDOR_ROUTES = ["/vendor"];
 const ADMIN_ROUTES = ["/admin"];
 const SUPER_ADMIN_ROUTES = ["/superadmin"];
 
+// Keys are lowercased JWT role values (after normalisation in getRoleFromToken)
 const ROLE_REDIRECT: Record<string, string> = {
-  customer: "/home",
-  vendor: "/vendor/dashboard",
-  admin: "/admin/dashboard",
+  student:    "/home",       // backend sends "STUDENT" → normalised to "student"
+  customer:   "/home",       // legacy fallback
+  vendor:     "/vendor/dashboard",
+  admin:      "/admin/dashboard",
   super_admin: "/superadmin/dashboard",
 };
 
@@ -42,7 +44,9 @@ function isTokenExpired(token: string): boolean {
 function getRoleFromToken(token: string): string | null {
   try {
     const decoded = jwtDecode<JwtPayload>(token);
-    return decoded.role;
+    // Normalise to lowercase so middleware comparisons work regardless of
+    // whether the backend sends "SUPER_ADMIN" or "super_admin"
+    return decoded.role?.toLowerCase() ?? null;
   } catch {
     return null;
   }
