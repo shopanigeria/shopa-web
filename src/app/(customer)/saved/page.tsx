@@ -121,7 +121,7 @@ export default function SavedItemsPage() {
 
                     <div className="flex items-center justify-between mt-[8px]">
                       <span className="font-jakarta font-bold text-[16px] text-[#2E7D32] tracking-[-0.04em]">
-                        {formatNaira(item.price * qty)}
+                        {formatNaira(Number(item.price) * qty)}
                       </span>
                       {/* Quantity stepper */}
                       <div className="flex items-center gap-[8px]">

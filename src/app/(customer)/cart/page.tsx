@@ -85,7 +85,7 @@ export default function CartPage() {
 
                       <div className="mt-[16px] flex flex-row items-center justify-between">
                         <p className="font-jakarta text-[16px] font-bold text-[#2E7D32] tracking-[-0.04em]">
-                          {formatNaira(item.product.price)}
+                          {formatNaira(Number(item.product.price))}
                         </p>
 
                         {/* Quantity Controls */}

@@ -21,7 +21,7 @@ export default function ProductCard({ product, className }: ProductCardProps) {
   const { isSaved, toggleSaved } = useSavedItemsStore();
   const wishlisted = isSaved(product.id);
 
-  const imageUri = product.imageUrls?.[0] ?? null;
+  const imageUri = product.imageUrls?.[0] ?? product.images?.[0] ?? null;
   const rating = product.rating ?? 0;
   const reviewCount = product.reviewCount ?? 0;
 

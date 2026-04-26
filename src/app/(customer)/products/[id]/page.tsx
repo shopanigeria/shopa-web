@@ -77,7 +77,7 @@ export default function ProductDetailPage() {
   const vendorName = product.vendor?.storeName ?? "Unknown Store";
   const description = product.description ?? "No description available.";
   const availableStock = Math.max(0, product.stock ?? 0);
-  const canAddToCart = product.isAvailable && availableStock > 0;
+  const canAddToCart = (product.isAvailable ?? product.isActive ?? true) && availableStock > 0;
   const reviewList = reviews ?? [];
   const reviewCount = reviewList.length;
   const avgRating =

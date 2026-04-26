@@ -40,14 +40,17 @@ export interface Product {
   id: string;
   name: string;
   description: string;
-  price: number;
-  imageUrls: string[];
+  price: number | string;      // API returns price as string
+  imageUrls?: string[];        // legacy field
+  images?: string[];           // API field
   category: Category;
   vendor: Pick<Vendor, "id" | "storeName" | "rating">;
   stock: number;
   rating?: number;
   reviewCount?: number;
-  isAvailable: boolean;
+  isAvailable?: boolean;       // legacy
+  isActive?: boolean;          // API field
+  saleType?: string;
   createdAt: string;
 }
 
