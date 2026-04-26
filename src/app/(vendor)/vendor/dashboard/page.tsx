@@ -300,7 +300,7 @@ function DeclineOrderModal({ onClose, onConfirm, isLoading }: {
 export default function VendorDashboardPage() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
-  const isMock = !user?.id || user.id === "mock-vendor-001";
+  const isMock = user?.id === "mock-vendor-001";
 
   const [viewOrder, setViewOrder] = useState<Order | null>(null);
   const [acceptOrder, setAcceptOrder] = useState<Order | null>(null);

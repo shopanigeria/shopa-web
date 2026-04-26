@@ -18,6 +18,7 @@ interface PlatformStats {
   platformFees: number;
   totalWithdrawals: number;
   pendingDeletionRequests: number;
+  pendingVendors: number;
   pendingWithdrawals: number;
   escalatedDisputes: number;
 }
@@ -33,7 +34,7 @@ interface RecentActivity {
 const MOCK_STATS: PlatformStats = {
   totalUniversities: 1, totalVendors: 24, totalStudents: 312,
   totalOrders: 1284, totalRevenue: 4200000, platformFees: 315000,
-  totalWithdrawals: 890000, pendingDeletionRequests: 2, pendingWithdrawals: 8, escalatedDisputes: 3,
+  totalWithdrawals: 890000, pendingDeletionRequests: 2, pendingVendors: 5, pendingWithdrawals: 8, escalatedDisputes: 3,
 };
 const MOCK_ACTIVITY: RecentActivity[] = [
   { id: "a1", type: "order", description: "New order #AB123456 — Primark Shirt (×2)", timestamp: new Date().toISOString(), status: "PENDING" },
@@ -55,13 +56,44 @@ function timeAgo(iso: string) {
 export default function SuperAdminDashboardPage() {
   const { user } = useAuthStore();
   const isMock = user?.id === "mock-superadmin-001";
+
   const { data: analytics } = useQuery<PlatformStats>({
     queryKey: ["superadmin-analytics"],
     queryFn: async () => { const { data } = await apiClient.get("/analytics/admin"); return data?.data ?? data; },
     enabled: !isMock,
   });
 
-  const stats = analytics ?? MOCK_STATS;
+  // Fetch live pending counts separately so the banner is always accurate
+  const { data: pendingVendors } = useQuery<unknown[]>({
+    queryKey: ["superadmin-pending-vendors"],
+    queryFn: async () => { const { data } = await apiClient.get("/vendors/admin/pending"); return data?.data ?? data ?? []; },
+    enabled: !isMock,
+  });
+  const { data: pendingWithdrawals } = useQuery<unknown[]>({
+    queryKey: ["superadmin-pending-withdrawals"],
+    queryFn: async () => { const { data } = await apiClient.get("/vendors/admin/withdrawals", { params: { status: "PENDING" } }); return data?.data ?? data ?? []; },
+    enabled: !isMock,
+  });
+  const { data: openDisputes } = useQuery<unknown[]>({
+    queryKey: ["superadmin-open-disputes"],
+    queryFn: async () => { const { data } = await apiClient.get("/disputes", { params: { status: "OPEN" } }); return data?.data ?? data ?? []; },
+    enabled: !isMock,
+  });
+  const { data: campuses } = useQuery<unknown[]>({
+    queryKey: ["superadmin-campuses-count"],
+    queryFn: async () => { const { data } = await apiClient.get("/campuses"); return Array.isArray(data) ? data : data?.data ?? []; },
+    enabled: !isMock,
+  });
+
+  const base = isMock ? MOCK_STATS : (analytics ?? MOCK_STATS);
+  const stats: PlatformStats = {
+    ...base,
+    totalUniversities: (campuses?.length) ?? base.totalUniversities,
+    pendingVendors: (pendingVendors?.length) ?? base.pendingVendors ?? 0,
+    pendingWithdrawals: (pendingWithdrawals?.length) ?? base.pendingWithdrawals,
+    escalatedDisputes: (openDisputes?.length) ?? base.escalatedDisputes,
+    pendingDeletionRequests: base.pendingDeletionRequests,
+  };
 
   return (
     <SuperAdminLayout>

@@ -67,7 +67,11 @@ export function useAuth() {
       };
 
       // Route map: JWT role → production subdomain URL
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+      // Ensure appUrl always has a protocol so we don't get double-domain paths
+      const rawAppUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+      const appUrl = rawAppUrl && !rawAppUrl.startsWith("http")
+        ? `https://${rawAppUrl}`
+        : rawAppUrl;
       const crossDomainRoutes: Record<string, string> = {
         STUDENT:     `${appUrl}/home`,
         VENDOR:      "https://vendor.shopshopa.com.ng/vendor/dashboard",

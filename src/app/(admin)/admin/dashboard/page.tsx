@@ -84,9 +84,15 @@ export default function AdminDashboardPage() {
     onError: () => toast.error("Action failed."),
   });
 
-  const stats = analytics ?? MOCK_ANALYTICS;
-  const apps = (pendingVendors ?? MOCK_APPS).slice(0, 5);
-  const recentDisputes = (disputes ?? MOCK_DISPUTES).slice(0, 5);
+  // Compute stats from fetched lists when analytics endpoint returns incomplete data
+  const apps = (pendingVendors ?? (isMock ? MOCK_APPS : [])).slice(0, 5);
+  const recentDisputes = (disputes ?? (isMock ? MOCK_DISPUTES : [])).slice(0, 5);
+  const stats: Analytics = {
+    totalVendors:   analytics?.totalVendors  ?? (isMock ? MOCK_ANALYTICS.totalVendors : 0),
+    pendingVendors: analytics?.pendingVendors ?? pendingVendors?.length ?? (isMock ? MOCK_ANALYTICS.pendingVendors : 0),
+    totalStudents:  analytics?.totalStudents  ?? (isMock ? MOCK_ANALYTICS.totalStudents : 0),
+    openDisputes:   analytics?.openDisputes   ?? disputes?.filter((d) => d.status === "OPEN").length ?? (isMock ? MOCK_ANALYTICS.openDisputes : 0),
+  };
   const adminName = user ? `${user.firstName} ${user.lastName}` : "Admin";
 
   return (
