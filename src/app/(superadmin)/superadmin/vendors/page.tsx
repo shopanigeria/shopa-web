@@ -25,20 +25,42 @@ export default function SuperAdminVendorsPage() {
   const queryClient = useQueryClient();
   const [actionModal, setActionModal] = useState<{ vendor: Vendor; action: "approve" | "reject" | "suspend" } | null>(null);
 
-  const { data: vendors, isLoading } = useQuery<Vendor[]>({
-    queryKey: ["superadmin-vendors"],
-    queryFn: async () => { const { data } = await apiClient.get("/vendors"); return data?.data ?? data ?? []; },
+  // Fetch approved vendors (public) and pending vendors (admin) separately, then merge
+  const { data: approvedVendors, isLoading: approvedLoading } = useQuery<Vendor[]>({
+    queryKey: ["superadmin-vendors-approved"],
+    queryFn: async () => {
+      const { data } = await apiClient.get("/vendors");
+      return data?.data ?? data ?? [];
+    },
   });
+
+  const { data: pendingVendors, isLoading: pendingLoading } = useQuery<Vendor[]>({
+    queryKey: ["superadmin-vendors-pending"],
+    queryFn: async () => {
+      const { data } = await apiClient.get("/vendors/admin/pending");
+      return data?.data ?? data ?? [];
+    },
+  });
+
+  const isLoading = approvedLoading || pendingLoading;
 
   const verifyMutation = useMutation({
     mutationFn: async ({ id, status, reason }: { id: string; status: string; reason?: string }) => {
       await apiClient.patch(`/vendors/admin/${id}/verify`, { status, ...(reason && { reason }) });
     },
-    onSuccess: () => { toast.success("Vendor updated."); queryClient.invalidateQueries({ queryKey: ["superadmin-vendors"] }); setActionModal(null); },
+    onSuccess: () => {
+      toast.success("Vendor updated.");
+      queryClient.invalidateQueries({ queryKey: ["superadmin-vendors-approved"] });
+      queryClient.invalidateQueries({ queryKey: ["superadmin-vendors-pending"] });
+      setActionModal(null);
+    },
     onError: () => toast.error("Action failed."),
   });
 
-  const all = vendors ?? [];
+  // Merge: pending first, then approved (deduplicate by id)
+  const merged = [...(pendingVendors ?? []), ...(approvedVendors ?? [])];
+  const seen = new Set<string>();
+  const all = merged.filter((v) => { if (seen.has(v.id)) return false; seen.add(v.id); return true; });
 
   return (
     <SuperAdminLayout>
