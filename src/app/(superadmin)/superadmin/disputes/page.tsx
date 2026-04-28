@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuthStore } from "@/stores/auth.store";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "sonner";
 import { AlertTriangle, Clock } from "lucide-react";
@@ -45,37 +44,6 @@ const SUPERADMIN_RESOLVE_STATUSES = ["ADMIN_TIMEOUT", "ESCALATED"];
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
 
-const MOCK_DISPUTES: Dispute[] = [
-  {
-    id: "d1", status: "VENDOR_TIMEOUT", reason: "Item never arrived",
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 55).toISOString(),
-    order: { orderNumber: "12345678", totalAmount: "5000", vendor: { storeName: "Fresh Provisions", campus: { name: "Crawford University" } }, user: { firstName: "Sade", lastName: "Bello" } },
-  },
-  {
-    id: "d2", status: "ESCALATED", reason: "Vendor unresponsive after delivery claim",
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 30).toISOString(),
-    vendorResponseAt: new Date(Date.now() - 1000 * 60 * 60 * 20).toISOString(),
-    order: { orderNumber: "87654321", totalAmount: "12000", vendor: { storeName: "Campus Gadgets", campus: { name: "Crawford University" } }, user: { firstName: "Kelvin", lastName: "Osei" } },
-  },
-  {
-    id: "d3", status: "ADMIN_TIMEOUT", reason: "Wrong item received",
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 80).toISOString(),
-    vendorResponseAt: new Date(Date.now() - 1000 * 60 * 60 * 60).toISOString(),
-    order: { orderNumber: "11223344", totalAmount: "8000", vendor: { storeName: "Style Hub", campus: { name: "Crawford University" } }, user: { firstName: "Ngozi", lastName: "Eze" } },
-  },
-  {
-    id: "d4", status: "RESOLVED", reason: "Item damaged on arrival",
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 120).toISOString(),
-    adminResolution: "Campus admin ruled in favour of customer. No refund required as vendor provided evidence of intact packaging at dispatch.",
-    refundRequested: false,
-    order: { orderNumber: "55667788", totalAmount: "3500", vendor: { storeName: "BookNook", campus: { name: "Crawford University" } }, user: { firstName: "Ade", lastName: "Martins" } },
-  },
-  {
-    id: "d5", status: "OPEN", reason: "Delayed delivery",
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 10).toISOString(),
-    order: { orderNumber: "99001122", totalAmount: "2200", vendor: { storeName: "Campus Bites", campus: { name: "Crawford University" } }, user: { firstName: "Temi", lastName: "Adeyemi" } },
-  },
-];
 
 // ── Resolve / refund modal ────────────────────────────────────────────────────
 
@@ -156,21 +124,16 @@ function ActionModal({ dispute, mode, onClose, onConfirm, isLoading }: {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function SuperAdminDisputesPage() {
-  const { user } = useAuthStore();
   const queryClient = useQueryClient();
-  const isMock = user?.id === "mock-superadmin-001";
-
   const [actionModal, setActionModal] = useState<{ dispute: Dispute; mode: ModalMode } | null>(null);
 
   const { data: disputes, isLoading } = useQuery<Dispute[]>({
     queryKey: ["superadmin-disputes"],
     queryFn: async () => { const { data } = await apiClient.get("/disputes"); return data?.data ?? data ?? []; },
-    enabled: !isMock,
   });
 
   const actionMutation = useMutation({
     mutationFn: async ({ id, mode, note }: { id: string; mode: ModalMode; note: string }) => {
-      if (isMock) { toast.success(mode === "refund" ? "Refund issued. (mock)" : "Dispute resolved. (mock)"); setActionModal(null); return; }
       const outcome = mode === "refund" ? "REFUND_ISSUED" : "RESOLVED";
       await apiClient.patch(`/disputes/${id}/resolve`, { resolution: note, outcome });
     },
@@ -182,7 +145,7 @@ export default function SuperAdminDisputesPage() {
     onError: () => toast.error("Action failed."),
   });
 
-  const all = disputes ?? MOCK_DISPUTES;
+  const all = disputes ?? [];
 
   const needsRefund = all.filter((d) => SUPERADMIN_REFUND_STATUSES.includes(d.status));
   const needsResolve = all.filter((d) => SUPERADMIN_RESOLVE_STATUSES.includes(d.status));
