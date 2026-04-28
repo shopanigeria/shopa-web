@@ -21,11 +21,6 @@ interface Student {
   campus?: { name: string };
 }
 
-const MOCK_STUDENTS: Student[] = [
-  { id: "s1", firstName: "Sade", lastName: "Bello", email: "sade@crawford.edu", phone: "08011111111", isVerified: true, isActive: true, createdAt: new Date().toISOString(), campus: { name: "Crawford University" } },
-  { id: "s2", firstName: "Kelvin", lastName: "Osei", email: "kelvin@crawford.edu", phone: "08022222222", isVerified: false, isActive: true, createdAt: new Date().toISOString(), campus: { name: "Crawford University" } },
-  { id: "s3", firstName: "Ngozi", lastName: "Eze", email: "ngozi@crawford.edu", phone: "08033333333", isVerified: true, isActive: false, createdAt: new Date().toISOString(), campus: { name: "Crawford University" } },
-];
 
 export default function SuperAdminStudentsPage() {
   const queryClient = useQueryClient();
@@ -33,7 +28,11 @@ export default function SuperAdminStudentsPage() {
 
   const { data: students, isLoading } = useQuery<Student[]>({
     queryKey: ["superadmin-students"],
-    queryFn: async () => { const { data } = await apiClient.get("/users?role=student"); return data?.data ?? data ?? []; },
+    queryFn: async () => {
+      // /users/pending-verifications returns all registered students
+      const { data } = await apiClient.get("/users/pending-verifications");
+      return data?.data ?? data ?? [];
+    },
   });
 
   const toggleMutation = useMutation({
@@ -48,7 +47,7 @@ export default function SuperAdminStudentsPage() {
     onError: () => toast.error("Action failed."),
   });
 
-  const all = students ?? MOCK_STUDENTS;
+  const all = students ?? [];
 
   return (
     <SuperAdminLayout>
