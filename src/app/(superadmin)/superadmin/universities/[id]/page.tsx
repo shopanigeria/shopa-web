@@ -58,20 +58,33 @@ function CreateAdminModal({
         lastName:  lastName.trim(),
         email:     email.trim(),
         password,
-        campusId,           // taken from the page URL param
+        campusId,
       });
-      return data?.data ?? data;
+      // Some NestJS responses wrap in { success, data } — unwrap if needed
+      const result = data?.data ?? data;
+      // If the API returned a non-success flag inside a 2xx, throw so onError fires
+      if (result?.success === false) {
+        throw { response: { data: result } };
+      }
+      return result;
     },
     onSuccess: (created) => {
+      console.log("[Create admin success]", created);
       toast.success(`Admin account created for ${firstName} ${lastName}.`);
       onCreated(created as Admin);
       onClose();
     },
     onError: (err: unknown) => {
-      const msg =
-        (err as { response?: { data?: { message?: string | string[] } } })
-          ?.response?.data?.message;
-      toast.error(Array.isArray(msg) ? msg.join(". ") : (msg ?? "Failed to create admin account."));
+      const errData = (err as { response?: { data?: { message?: string | string[]; error?: string; statusCode?: number } } })?.response?.data;
+      console.error("[Create admin error]", errData ?? err);
+      const msg = errData?.message;
+      const status = errData?.statusCode;
+      const fallback = status === 409
+        ? "An account with this email already exists."
+        : status === 403
+        ? "You do not have permission to create admin accounts."
+        : "Failed to create admin account.";
+      toast.error(Array.isArray(msg) ? msg.join(". ") : (msg ?? fallback));
     },
   });
 
