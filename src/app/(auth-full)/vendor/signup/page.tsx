@@ -9,7 +9,6 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { apiClient } from "@/lib/api/client";
-import { authService } from "@/lib/api";
 import SuccessModal from "@/components/shared/SuccessModal";
 import { toast } from "sonner";
 
@@ -18,26 +17,20 @@ interface Campus {
   name: string;
 }
 
-const SELLING_CATEGORIES = [
-  "Fashion & Clothing",
-  "Gadgets & Electronics",
-  "Body Care & Beauty",
-  "Food & Provisions",
-  "Books & Stationery",
-  "Sports & Fitness",
-  "Accessories",
-  "Others",
-];
+interface ApiCategory {
+  id: string;
+  name: string;
+}
 
 const STOCK_TYPE_OPTIONS = [
-  { value: "preorder", label: "Pre-order" },
-  { value: "in-stock", label: "In-stock" },
-  { value: "both", label: "Both" },
+  { value: "PREORDER", label: "Pre-order" },
+  { value: "IN_STOCK", label: "In-stock" },
+  { value: "BOTH", label: "Both" },
 ] as const;
 
-const MAX_PREORDER_OPTIONS = [
-  "1 week", "2 weeks", "3 weeks", "4 weeks", "More than 4 weeks",
-];
+type SaleType = "PREORDER" | "IN_STOCK" | "BOTH";
+
+const MAX_PREORDER_OPTIONS = [7, 14, 21, 28];
 
 const step1Schema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -45,7 +38,7 @@ const step1Schema = z.object({
   storeName: z.string().min(2, "Store name must be at least 2 characters"),
   phone: z.string().regex(/^(\+234|0)[789][01]\d{8}$/, "Enter a valid Nigerian phone number"),
   email: z.string().email("Enter a valid email address"),
-  campusId: z.string().optional(),
+  campusId: z.string().min(1, "Please select your university"),
 });
 
 const step3Schema = z
@@ -99,15 +92,19 @@ export default function VendorSignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [step1Data, setStep1Data] = useState<Step1Data | null>(null);
+
+  // Campuses
   const [campuses, setCampuses] = useState<Campus[]>([]);
   const [campusesLoading, setCampusesLoading] = useState(true);
-  const FALLBACK_CAMPUSES: Campus[] = [{ id: "", name: "Crawford University" }];
+
+  // Categories from API
+  const [apiCategories, setApiCategories] = useState<ApiCategory[]>([]);
 
   // Step 2 state
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [stockType, setStockType] = useState<"preorder" | "in-stock" | "both" | null>(null);
-  const [maxPreorderTime, setMaxPreorderTime] = useState("");
-  const [longerPreorderDetail, setLongerPreorderDetail] = useState("");
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [itemsSold, setItemsSold] = useState<string[]>([]);  // human-readable names
+  const [saleType, setSaleType] = useState<SaleType | null>(null);
+  const [maxPreorderDays, setMaxPreorderDays] = useState<number | null>(null);
   const [description, setDescription] = useState("");
   const [step2Errors, setStep2Errors] = useState<Record<string, string>>({});
 
@@ -121,22 +118,38 @@ export default function VendorSignupPage() {
   const form1 = useForm<Step1Data>({ resolver: zodResolver(step1Schema) });
   const form3 = useForm<Step3Data>({ resolver: zodResolver(step3Schema) });
 
+  // Load campuses and categories on mount
   useEffect(() => {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-    apiClient
-      .get<Campus[]>("/campuses", { signal: controller.signal })
-      .then((res) => setCampuses(res.data?.length ? res.data : FALLBACK_CAMPUSES))
-      .catch(() => setCampuses(FALLBACK_CAMPUSES))
+    const timeout = setTimeout(() => controller.abort(), 8000);
+
+    apiClient.get<Campus[]>("/campuses", { signal: controller.signal })
+      .then((res) => {
+        const data = Array.isArray(res.data) ? res.data : [];
+        setCampuses(data.length ? data : [{ id: "", name: "Crawford University" }]);
+      })
+      .catch(() => setCampuses([{ id: "", name: "Crawford University" }]))
       .finally(() => { clearTimeout(timeout); setCampusesLoading(false); });
+
+    apiClient.get<ApiCategory[]>("/categories")
+      .then((res) => {
+        const data = Array.isArray(res.data) ? res.data : [];
+        setApiCategories(data);
+      })
+      .catch(() => setApiCategories([]));
+
     return () => { controller.abort(); clearTimeout(timeout); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const toggleCategory = (cat: string) => {
-    setSelectedCategories((prev) =>
-      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
-    );
+  const toggleCategory = (cat: ApiCategory) => {
+    if (selectedCategoryIds.includes(cat.id)) {
+      setSelectedCategoryIds((prev) => prev.filter((id) => id !== cat.id));
+      setItemsSold((prev) => prev.filter((n) => n !== cat.name));
+    } else {
+      setSelectedCategoryIds((prev) => [...prev, cat.id]);
+      setItemsSold((prev) => [...prev, cat.name]);
+    }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -149,12 +162,12 @@ export default function VendorSignupPage() {
 
   const validateStep2 = (): boolean => {
     const errs: Record<string, string> = {};
-    if (selectedCategories.length === 0) errs.categories = "Select at least one category";
+    if (selectedCategoryIds.length === 0) errs.categories = "Select at least one category";
     if (!description.trim() || description.trim().length < 10)
       errs.description = "Please describe your items (min 10 characters)";
-    if (!stockType) errs.stockType = "Select a stock type";
-    if ((stockType === "preorder" || stockType === "both") && !maxPreorderTime)
-      errs.maxPreorderTime = "Select maximum preorder time";
+    if (!saleType) errs.saleType = "Select a sale type";
+    if ((saleType === "PREORDER" || saleType === "BOTH") && !maxPreorderDays)
+      errs.maxPreorderDays = "Select maximum preorder days";
     setStep2Errors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -174,44 +187,40 @@ export default function VendorSignupPage() {
 
     setIsLoading(true);
     try {
-      await apiClient.post("/auth/register", {
-        firstName: step1Data.firstName,
-        lastName: step1Data.lastName,
-        phone: step1Data.phone,
-        email: step1Data.email,
-        password: data.password,
-        ...(step1Data.campusId ? { campusId: step1Data.campusId } : {}),
-      });
+      // Step A — upload student ID first, get Cloudinary URL
+      let studentIdUrl: string | undefined;
+      const formData = new FormData();
+      formData.append("file", studentIdFile);  // field name must be 'file'
+      const uploadRes = await apiClient.post<{ url: string; data?: { url: string } }>(
+        "/upload/image",
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+      studentIdUrl = uploadRes.data?.url ?? uploadRes.data?.data?.url;
 
-      await authService.login({ email: step1Data.email, password: data.password });
-
-      let studentIdUrl = "";
-      try {
-        const formData = new FormData();
-        formData.append("image", studentIdFile);
-        const uploadRes = await apiClient.post<{ url: string }>("/upload/image", formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
-        studentIdUrl = uploadRes.data?.url ?? "";
-      } catch { /* non-fatal */ }
-
-      await apiClient.post("/vendors/apply", {
-        storeName: step1Data.storeName,
-        description,
-        categories: selectedCategories,
-        stockType,
-        ...(maxPreorderTime ? { maxPreorderTime } : {}),
-        ...(longerPreorderDetail ? { longerPreorderDetail } : {}),
-        matricNumber: data.matricNumber,
+      // Step B — single call to POST /vendors/register with full payload
+      await apiClient.post("/vendors/register", {
+        firstName:      step1Data.firstName,
+        lastName:       step1Data.lastName,
+        storeName:      step1Data.storeName,
+        phone:          step1Data.phone,
+        email:          step1Data.email,
+        campusId:       step1Data.campusId,
+        categoryIds:    selectedCategoryIds,
+        itemsSold:      itemsSold,
+        saleType:       saleType,
+        ...(saleType !== "IN_STOCK" && maxPreorderDays ? { maxPreorderDays } : {}),
+        matricNumber:   data.matricNumber,
+        password:       data.password,
         ...(studentIdUrl ? { studentIdUrl } : {}),
       });
 
       setShowSuccess(true);
     } catch (err: unknown) {
       const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        "Something went wrong. Please try again.";
-      toast.error(Array.isArray(msg) ? msg.join(", ") : msg);
+        (err as { response?: { data?: { message?: string | string[] } } })
+          ?.response?.data?.message ?? "Something went wrong. Please try again.";
+      toast.error(Array.isArray(msg) ? msg.join(". ") : String(msg));
     } finally {
       setIsLoading(false);
     }
@@ -220,7 +229,7 @@ export default function VendorSignupPage() {
   if (showSuccess) {
     return (
       <SuccessModal
-        message="Application submitted! Our team will review your details and reach out within 48 hours."
+        message="Application submitted! Our team will review your details and get back to you within 48 hours."
         onClose={() => router.push("/vendor/login")}
       />
     );
@@ -297,18 +306,24 @@ export default function VendorSignupPage() {
           <div className="space-y-[5px]">
             <label className="label-field">Select your university<span className="text-[#FDC500]">*</span></label>
             <div className="relative">
-              <select {...form1.register("campusId")} className="input-field appearance-none pr-10" defaultValue="" disabled={campusesLoading} aria-label="Select university" title="Select university">
-                {campusesLoading ? (
-                  <option value="" disabled>Loading universities...</option>
-                ) : (
-                  <>
-                    {campuses.length > 1 && <option value="" disabled>Select your university</option>}
-                    {campuses.map((c) => <option key={c.id || "fallback"} value={c.id}>{c.name}</option>)}
-                  </>
-                )}
+              <select
+                {...form1.register("campusId")}
+                className="input-field appearance-none pr-10"
+                defaultValue=""
+                disabled={campusesLoading}
+                aria-label="Select university"
+                title="Select university"
+              >
+                <option value="" disabled>
+                  {campusesLoading ? "Loading universities..." : "Select your university"}
+                </option>
+                {campuses.map((c) => (
+                  <option key={c.id || "fallback"} value={c.id}>{c.name}</option>
+                ))}
               </select>
               <ChevronDown size={24} className="absolute right-[10px] top-1/2 -translate-y-1/2 text-[#151515] pointer-events-none" />
             </div>
+            {form1.formState.errors.campusId && <p className="text-[#FDC500] text-[11px]">{form1.formState.errors.campusId.message}</p>}
           </div>
 
           <button type="button" onClick={handleStep1Next} className="w-full h-[45px] bg-[#2E7D32] text-white rounded-[8px] font-semibold text-[14px] hover:bg-[#1D5620] transition-colors mt-[8px]">
@@ -327,20 +342,24 @@ export default function VendorSignupPage() {
         <div className="space-y-[16px]">
           <div className="space-y-[8px]">
             <label className="font-jakarta text-[14px] font-medium text-[#333333] tracking-[-0.04em]">
-              What are you selling?<span className="text-[#FDC500]">*</span>
+              What categories do you sell in?<span className="text-[#FDC500]">*</span>
             </label>
-            <div className="flex flex-wrap gap-[8px]">
-              {SELLING_CATEGORIES.map((cat) => {
-                const selected = selectedCategories.includes(cat);
-                return (
-                  <button key={cat} type="button" onClick={() => toggleCategory(cat)}
-                    className={`px-[12px] py-[6px] rounded-[6px] text-[13px] font-jakarta font-medium tracking-[-0.04em] border transition-colors
-                      ${selected ? "bg-[#2E7D32] text-white border-[#2E7D32]" : "bg-white text-[#333333] border-[#EAEAEA] hover:border-[#2E7D32]"}`}>
-                    {selected && <Check size={12} className="inline mr-[4px]" strokeWidth={3} />}{cat}
-                  </button>
-                );
-              })}
-            </div>
+            {apiCategories.length === 0 ? (
+              <p className="font-jakarta text-[13px] text-[#9B9B9B]">Loading categories...</p>
+            ) : (
+              <div className="flex flex-wrap gap-[8px]">
+                {apiCategories.map((cat) => {
+                  const selected = selectedCategoryIds.includes(cat.id);
+                  return (
+                    <button key={cat.id} type="button" onClick={() => toggleCategory(cat)}
+                      className={`px-[12px] py-[6px] rounded-[6px] text-[13px] font-jakarta font-medium tracking-[-0.04em] border transition-colors
+                        ${selected ? "bg-[#2E7D32] text-white border-[#2E7D32]" : "bg-white text-[#333333] border-[#EAEAEA] hover:border-[#2E7D32]"}`}>
+                      {selected && <Check size={12} className="inline mr-[4px]" strokeWidth={3} />}{cat.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             {step2Errors.categories && <p className="text-[#FDC500] text-[11px]">{step2Errors.categories}</p>}
           </div>
 
@@ -348,49 +367,53 @@ export default function VendorSignupPage() {
             <label className="font-jakarta text-[14px] font-medium text-[#333333] tracking-[-0.04em]">
               Briefly describe your items<span className="text-[#FDC500]">*</span>
             </label>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describe what you sell..."
-              className="w-full rounded-[8px] border border-[#EAEAEA] bg-[#EAEAEA] px-[10px] py-[12px] font-jakarta text-[14px] text-[#333333] placeholder:text-[#C2C2C2] min-h-[90px] resize-none focus:outline-none focus:border-[#2E7D32] focus:bg-white transition-colors" />
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Describe what you sell..."
+              className="w-full rounded-[8px] border border-[#EAEAEA] bg-[#EAEAEA] px-[10px] py-[12px] font-jakarta text-[14px] text-[#333333] placeholder:text-[#C2C2C2] min-h-[90px] resize-none focus:outline-none focus:border-[#2E7D32] focus:bg-white transition-colors"
+              title="Describe your items"
+            />
             {step2Errors.description && <p className="text-[#FDC500] text-[11px]">{step2Errors.description}</p>}
           </div>
 
           <div className="space-y-[8px]">
             <label className="font-jakarta text-[14px] font-medium text-[#333333] tracking-[-0.04em]">
-              Do you sell preorder, in-stock, or both?<span className="text-[#FDC500]">*</span>
+              Sale type<span className="text-[#FDC500]">*</span>
             </label>
             <div className="flex gap-[8px]">
               {STOCK_TYPE_OPTIONS.map((opt) => (
-                <button key={opt.value} type="button" onClick={() => setStockType(opt.value)}
+                <button key={opt.value} type="button" onClick={() => setSaleType(opt.value)}
                   className={`flex-1 h-[40px] rounded-[8px] text-[13px] font-jakarta font-medium border transition-colors tracking-[-0.04em]
-                    ${stockType === opt.value ? "bg-[#2E7D32] text-white border-[#2E7D32]" : "bg-white text-[#333333] border-[#EAEAEA] hover:border-[#2E7D32]"}`}>
+                    ${saleType === opt.value ? "bg-[#2E7D32] text-white border-[#2E7D32]" : "bg-white text-[#333333] border-[#EAEAEA] hover:border-[#2E7D32]"}`}>
                   {opt.label}
                 </button>
               ))}
             </div>
-            {step2Errors.stockType && <p className="text-[#FDC500] text-[11px]">{step2Errors.stockType}</p>}
+            {step2Errors.saleType && <p className="text-[#FDC500] text-[11px]">{step2Errors.saleType}</p>}
           </div>
 
-          {(stockType === "preorder" || stockType === "both") && (
+          {(saleType === "PREORDER" || saleType === "BOTH") && (
             <div className="space-y-[5px]">
               <label className="font-jakarta text-[14px] font-medium text-[#333333] tracking-[-0.04em]">
-                Maximum preorder time<span className="text-[#FDC500]">*</span>
+                Maximum preorder days<span className="text-[#FDC500]">*</span>
               </label>
               <div className="relative">
-                <select value={maxPreorderTime} onChange={(e) => setMaxPreorderTime(e.target.value)}
-                  className="input-field appearance-none pr-10" aria-label="Maximum preorder time" title="Maximum preorder time">
-                  <option value="" disabled>Select time range</option>
-                  {MAX_PREORDER_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                <select
+                  value={maxPreorderDays ?? ""}
+                  onChange={(e) => setMaxPreorderDays(Number(e.target.value))}
+                  className="input-field appearance-none pr-10"
+                  aria-label="Maximum preorder days"
+                  title="Maximum preorder days"
+                >
+                  <option value="" disabled>Select max days</option>
+                  {MAX_PREORDER_OPTIONS.map((d) => (
+                    <option key={d} value={d}>{d} days</option>
+                  ))}
                 </select>
                 <ChevronDown size={20} className="absolute right-[10px] top-1/2 -translate-y-1/2 text-[#151515] pointer-events-none" />
               </div>
-              {step2Errors.maxPreorderTime && <p className="text-[#FDC500] text-[11px]">{step2Errors.maxPreorderTime}</p>}
-            </div>
-          )}
-
-          {maxPreorderTime === "More than 4 weeks" && (
-            <div className="space-y-[5px]">
-              <label className="font-jakarta text-[14px] font-medium text-[#333333] tracking-[-0.04em]">Please specify</label>
-              <input type="text" value={longerPreorderDetail} onChange={(e) => setLongerPreorderDetail(e.target.value)}
-                placeholder="e.g. 6-8 weeks for custom orders" className="input-field" />
+              {step2Errors.maxPreorderDays && <p className="text-[#FDC500] text-[11px]">{step2Errors.maxPreorderDays}</p>}
             </div>
           )}
 
@@ -435,7 +458,15 @@ export default function VendorSignupPage() {
             <label className="font-jakarta text-[14px] font-medium text-[#333333] tracking-[-0.04em]">
               Upload Student ID<span className="text-[#FDC500]">*</span>
             </label>
-            <input ref={fileInputRef} type="file" accept="image/*,.pdf" aria-label="Upload student ID" title="Upload student ID" className="hidden" onChange={handleFileSelect} />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,.pdf"
+              aria-label="Upload student ID"
+              title="Upload student ID"
+              className="hidden"
+              onChange={handleFileSelect}
+            />
             {!studentIdFile ? (
               <button type="button" onClick={() => fileInputRef.current?.click()}
                 className="w-full h-[80px] rounded-[8px] border-2 border-dashed border-[#EAEAEA] flex flex-col items-center justify-center gap-[6px] hover:border-[#2E7D32] transition-colors">
@@ -474,8 +505,11 @@ export default function VendorSignupPage() {
           </label>
           {form3.formState.errors.agreedToTerms && <p className="text-[#FDC500] text-[11px]">{form3.formState.errors.agreedToTerms.message}</p>}
 
-          <button type="submit" disabled={isLoading}
-            className="w-full h-[45px] bg-[#2E7D32] text-white rounded-[8px] font-semibold text-[14px] hover:bg-[#1D5620] transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-[4px]">
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full h-[45px] bg-[#2E7D32] text-white rounded-[8px] font-semibold text-[14px] hover:bg-[#1D5620] transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-[4px]"
+          >
             {isLoading ? (<><Loader2 size={16} className="animate-spin" />Submitting...</>) : "FINISH"}
           </button>
         </form>
