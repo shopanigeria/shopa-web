@@ -188,7 +188,6 @@ export default function VendorSignupPage() {
     setIsLoading(true);
     try {
       // Step A — upload student ID first, get Cloudinary URL
-      let studentIdUrl: string | undefined;
       const formData = new FormData();
       formData.append("file", studentIdFile);  // field name must be 'file'
       const uploadRes = await apiClient.post<{ url: string; data?: { url: string } }>(
@@ -196,7 +195,7 @@ export default function VendorSignupPage() {
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
-      studentIdUrl = uploadRes.data?.url ?? uploadRes.data?.data?.url;
+      const studentIdUrl = uploadRes.data?.url ?? uploadRes.data?.data?.url;
 
       // Step B — single call to POST /vendors/register with full payload
       await apiClient.post("/vendors/register", {
