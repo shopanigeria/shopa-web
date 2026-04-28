@@ -18,11 +18,6 @@ interface Order {
   vendor?: { storeName: string; campus?: { name: string } };
 }
 
-const MOCK_ORDERS: Order[] = [
-  { id: "o1", orderNumber: "AB123456", status: "DELIVERED", totalAmount: "40000", createdAt: new Date().toISOString(), user: { firstName: "Sade", lastName: "Bello" }, vendor: { storeName: "Fresh Provisions", campus: { name: "Crawford University" } } },
-  { id: "o2", orderNumber: "CD789012", status: "PENDING", totalAmount: "12500", createdAt: new Date().toISOString(), user: { firstName: "Kelvin", lastName: "Osei" }, vendor: { storeName: "Campus Gadgets", campus: { name: "Crawford University" } } },
-  { id: "o3", orderNumber: "EF345678", status: "FAILED", totalAmount: "8000", createdAt: new Date().toISOString(), user: { firstName: "Ngozi", lastName: "Eze" }, vendor: { storeName: "Style Hub", campus: { name: "Crawford University" } } },
-];
 
 export default function SuperAdminOrdersPage() {
   const router = useRouter();
@@ -32,7 +27,7 @@ export default function SuperAdminOrdersPage() {
     queryFn: async () => { const { data } = await apiClient.get("/orders"); return data?.data ?? data ?? []; },
   });
 
-  const all = orders ?? MOCK_ORDERS;
+  const all = orders ?? [];
 
   return (
     <SuperAdminLayout>

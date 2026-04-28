@@ -20,11 +20,6 @@ interface Vendor {
   categories?: string[];
 }
 
-const MOCK_VENDORS: Vendor[] = [
-  { id: "v1", storeName: "Fresh Provisions", status: "APPROVED", createdAt: new Date().toISOString(), campus: { name: "Crawford University" }, user: { firstName: "Tolu", lastName: "Adeyemi", email: "tolu@test.com" }, categories: ["Provisions"] },
-  { id: "v2", storeName: "Campus Gadgets", status: "PENDING", createdAt: new Date().toISOString(), campus: { name: "Crawford University" }, user: { firstName: "Emeka", lastName: "Obi", email: "emeka@test.com" }, categories: ["Gadgets & Accessories"] },
-  { id: "v3", storeName: "Style Hub", status: "REJECTED", createdAt: new Date().toISOString(), campus: { name: "Crawford University" }, user: { firstName: "Amaka", lastName: "Eze", email: "amaka@test.com" }, categories: ["Clothing & Accessories"] },
-];
 
 export default function SuperAdminVendorsPage() {
   const queryClient = useQueryClient();
@@ -43,7 +38,7 @@ export default function SuperAdminVendorsPage() {
     onError: () => toast.error("Action failed."),
   });
 
-  const all = vendors ?? MOCK_VENDORS;
+  const all = vendors ?? [];
 
   return (
     <SuperAdminLayout>

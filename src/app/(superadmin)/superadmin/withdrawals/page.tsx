@@ -21,11 +21,6 @@ interface Withdrawal {
   vendor?: { storeName: string; campus?: { name: string }; user?: { firstName: string; lastName: string } };
 }
 
-const MOCK_WITHDRAWALS: Withdrawal[] = [
-  { id: "w1", amount: 50000, status: "PENDING", createdAt: new Date().toISOString(), bankDetails: { accountNumber: "0123456789", bankName: "Access Bank", accountName: "Tolu Adeyemi" }, vendor: { storeName: "Fresh Provisions", campus: { name: "Crawford University" }, user: { firstName: "Tolu", lastName: "Adeyemi" } } },
-  { id: "w2", amount: 25000, status: "APPROVED", createdAt: new Date().toISOString(), bankDetails: { accountNumber: "9876543210", bankName: "GTB", accountName: "Emeka Obi" }, vendor: { storeName: "Campus Gadgets", campus: { name: "Crawford University" }, user: { firstName: "Emeka", lastName: "Obi" } } },
-  { id: "w3", amount: 15000, status: "REJECTED", createdAt: new Date().toISOString(), bankDetails: { accountNumber: "1122334455", bankName: "UBA", accountName: "Amaka Eze" }, vendor: { storeName: "Style Hub", campus: { name: "Crawford University" }, user: { firstName: "Amaka", lastName: "Eze" } } },
-];
 
 export default function WithdrawalsPage() {
   const queryClient = useQueryClient();
@@ -48,7 +43,7 @@ export default function WithdrawalsPage() {
     onError: () => toast.error("Action failed."),
   });
 
-  const all = withdrawals ?? MOCK_WITHDRAWALS;
+  const all = withdrawals ?? [];
   const pending = all.filter((w) => w.status === "PENDING");
   const approvedThisMonth = all.filter((w) => w.status === "APPROVED" && new Date(w.createdAt).getMonth() === new Date().getMonth());
   const totalPending = pending.reduce((s, w) => s + w.amount, 0);

@@ -19,9 +19,6 @@ interface Campus {
   _count?: { vendors: number; students: number };
 }
 
-const MOCK_CAMPUSES: Campus[] = [
-  { id: "c1", name: "Crawford University", code: "CRAWFORD", location: "Igbesa, Ogun State", isActive: true, _count: { vendors: 24, students: 312 } },
-];
 
 export default function UniversitiesPage() {
   const queryClient = useQueryClient();
@@ -48,7 +45,7 @@ export default function UniversitiesPage() {
     onError: () => toast.error("Failed to update status."),
   });
 
-  const all = campuses ?? MOCK_CAMPUSES;
+  const all = campuses ?? [];
 
   const inputClass = "w-full rounded-[8px] border border-[#EAEAEA] bg-[#F7FFF8] px-[12px] py-[10px] font-jakarta text-[13px] text-[#333333] placeholder:text-[#C2C2C2] focus:outline-none focus:border-[#2E7D32]";
 
@@ -68,6 +65,10 @@ export default function UniversitiesPage() {
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[16px]">
           {[1, 2].map((i) => <div key={i} className="bg-white rounded-[12px] border border-[#EAEAEA] h-[140px] animate-pulse" />)}
+        </div>
+      ) : all.length === 0 ? (
+        <div className="bg-white rounded-[12px] border border-[#EAEAEA] p-[40px] text-center">
+          <p className="font-jakarta text-[14px] text-[#9B9B9B]">No universities registered yet.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[16px]">
