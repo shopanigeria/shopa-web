@@ -14,8 +14,10 @@ interface Dispute {
   status: string;
   reason: string;
   createdAt: string;
-  order?: { orderNumber?: string; vendor?: { storeName?: string }; user?: { firstName: string; lastName: string } };
-  user?: { firstName: string; lastName: string };
+  order?: { orderNumber?: string; vendor?: { storeName?: string }; user?: { firstName: string; lastName: string; email?: string }; buyer?: { firstName: string; lastName: string; email?: string } };
+  user?: { firstName: string; lastName: string; email?: string };
+  buyer?: { firstName: string; lastName: string; email?: string };
+  raisedBy?: { firstName: string; lastName: string; email?: string };
 }
 
 const MOCK_DISPUTES: Dispute[] = [
@@ -54,7 +56,7 @@ export default function AdminDisputesPage() {
   ];
 
   return (
-    <AdminLayout campusName="Crawford University">
+    <AdminLayout >
       <div className="mb-[20px]">
         <h1 className="font-satoshi font-bold text-[20px] md:text-[22px] text-[#151515]">Disputes</h1>
         <p className="font-jakarta text-[13px] text-[#9B9B9B] mt-[2px]">{all.length} total disputes</p>
@@ -76,7 +78,7 @@ export default function AdminDisputesPage() {
         {isLoading ? [1,2,3].map((i) => <div key={i} className="bg-white rounded-[12px] border border-[#EAEAEA] h-[110px] animate-pulse" />) :
         all.length === 0 ? <p className="font-jakarta text-[14px] text-[#9B9B9B] text-center py-[40px]">No disputes found.</p> :
         all.map((d) => {
-          const buyer = d.order?.user ?? d.user;
+          const buyer = d.raisedBy ?? d.order?.buyer ?? d.order?.user ?? d.user;
           return (
             <div key={d.id} className="bg-white rounded-[12px] border border-[#EAEAEA] p-[16px]">
               <div className="flex items-start justify-between gap-[8px] mb-[8px]">
@@ -86,7 +88,8 @@ export default function AdminDisputesPage() {
                 <StatusBadge status={d.status} />
               </div>
               <p className="font-jakarta text-[12px] text-[#545454] mb-[4px]">{d.reason}</p>
-              {buyer && <p className="font-jakarta text-[11px] text-[#9B9B9B] mb-[4px]">Buyer: {buyer.firstName} {buyer.lastName}</p>}
+              {buyer && <p className="font-jakarta text-[11px] text-[#9B9B9B] mb-[2px]">Buyer: {buyer.firstName} {buyer.lastName}</p>}
+              {buyer?.email && <p className="font-jakarta text-[11px] text-[#9B9B9B] mb-[4px]">{buyer.email}</p>}
               {d.order?.vendor?.storeName && <p className="font-jakarta text-[11px] text-[#9B9B9B] mb-[10px]">Vendor: {d.order.vendor.storeName}</p>}
               <Link href={`/admin/disputes/${d.id}`} className="font-jakarta text-[12px] text-[#2E7D32] font-semibold underline">
                 View Details →
@@ -107,7 +110,7 @@ export default function AdminDisputesPage() {
           emptyMessage="No disputes found."
           columns={[
             { key: "order", label: "Order #", render: (row) => { const d = row as unknown as Dispute; return <span className="font-jakarta font-semibold text-[13px] text-[#151515]">#{(d.order?.orderNumber ?? d.id).slice(-8).toUpperCase()}</span>; } },
-            { key: "buyer", label: "Buyer", render: (row) => { const d = row as unknown as Dispute; const buyer = d.order?.user ?? d.user; return <span className="font-jakarta text-[13px] text-[#333333]">{buyer ? `${buyer.firstName} ${buyer.lastName}` : "—"}</span>; } },
+            { key: "buyer", label: "Buyer", render: (row) => { const d = row as unknown as Dispute; const buyer = d.raisedBy ?? d.order?.buyer ?? d.order?.user ?? d.user; return <div><p className="font-jakarta text-[13px] text-[#333333]">{buyer ? `${buyer.firstName} ${buyer.lastName}` : "—"}</p>{buyer?.email && <p className="font-jakarta text-[11px] text-[#9B9B9B]">{buyer.email}</p>}</div>; } },
             { key: "vendor", label: "Vendor", render: (row) => <span className="font-jakarta text-[13px] text-[#333333]">{(row as unknown as Dispute).order?.vendor?.storeName ?? "—"}</span> },
             { key: "reason", label: "Reason", render: (row) => <span className="font-jakarta text-[13px] text-[#333333] max-w-[200px] truncate block">{(row as unknown as Dispute).reason}</span> },
             { key: "status", label: "Status", render: (row) => <StatusBadge status={(row as unknown as Dispute).status} /> },

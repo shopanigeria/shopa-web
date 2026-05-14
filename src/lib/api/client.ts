@@ -11,22 +11,21 @@ export const tokenStorage = {
   getAccess: () => Cookies.get(ACCESS_TOKEN_KEY) ?? null,
   getRefresh: () => Cookies.get(REFRESH_TOKEN_KEY) ?? null,
   setTokens: (access: string, refresh: string) => {
-    // HttpOnly cookies must be set server-side; these are client-accessible fallbacks
-    // For production, the backend should set HttpOnly cookies directly
-    Cookies.set(ACCESS_TOKEN_KEY, access, {
-      expires: 1, // 1 day
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-    });
-    Cookies.set(REFRESH_TOKEN_KEY, refresh, {
-      expires: 7, // 7 days
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-    });
+    const isProd = process.env.NODE_ENV === "production";
+    const cookieOptions = {
+      secure: isProd,
+      sameSite: "lax" as const,
+      // Share tokens across all *.shopshopa.com.ng subdomains in production
+      ...(isProd ? { domain: ".shopshopa.com.ng" } : {}),
+    };
+    Cookies.set(ACCESS_TOKEN_KEY, access, { ...cookieOptions, expires: 1 });
+    Cookies.set(REFRESH_TOKEN_KEY, refresh, { ...cookieOptions, expires: 7 });
   },
   clearTokens: () => {
-    Cookies.remove(ACCESS_TOKEN_KEY);
-    Cookies.remove(REFRESH_TOKEN_KEY);
+    const isProd = process.env.NODE_ENV === "production";
+    const removeOptions = isProd ? { domain: ".shopshopa.com.ng" } : undefined;
+    Cookies.remove(ACCESS_TOKEN_KEY, removeOptions);
+    Cookies.remove(REFRESH_TOKEN_KEY, removeOptions);
   },
 };
 

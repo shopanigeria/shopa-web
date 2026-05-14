@@ -127,7 +127,7 @@ export default function AccountSettingsPage() {
 
       {/* Save button — fixed at bottom */}
       <div className="fixed bottom-0 left-0 right-0 flex justify-center z-20 pointer-events-none">
-        <div className="w-full max-w-[390px] md:max-w-[720px] px-[24px] pb-[32px] pointer-events-auto">
+        <div className="w-full md:max-w-[720px] px-[16px] sm:px-[24px] pb-[32px] pointer-events-auto">
           <button
             type="button"
             onClick={handleSave}

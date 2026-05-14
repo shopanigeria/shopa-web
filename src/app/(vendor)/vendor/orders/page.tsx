@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 interface OrderItem {
   quantity: number;
   price: string;
-  product: { name: string; imageUrls?: string[]; images?: string[] };
+  product: { name: string; images?: string[]; imageUrls?: string[]; price?: string };
 }
 
 interface Order {
@@ -25,12 +25,19 @@ interface Order {
   status: string;
   totalAmount: string;
   deliveryAddress?: string;
+  pickupLocation?: string;
+  deliveryType?: string;
   createdAt: string;
   expectedDelivery?: string;
+  expectedDeliveryDate?: string;
   deliveredAt?: string;
+  updatedAt?: string;
   orderItems: OrderItem[];
-  user?: { firstName: string; lastName: string };
+  user?: { firstName: string; lastName: string; phone?: string };
+  buyer?: { firstName: string; lastName: string; phone?: string };
   saleType?: string;
+  paymentStatus?: string;
+  notes?: string;
 }
 
 type Tab = "INCOMING" | "ONGOING" | "COMPLETED" | "FAILED";
@@ -67,10 +74,10 @@ const MOCK_ORDERS: Order[] = [
 ];
 
 const STATUS_MAP: Record<Tab, string[]> = {
-  INCOMING: ["PENDING"],
-  ONGOING: ["ACCEPTED", "IN_PROGRESS"],
+  INCOMING: ["PENDING", "PAID", "PAYMENT_PENDING"],
+  ONGOING: ["ACCEPTED", "CONFIRMED", "IN_PROGRESS", "SHIPPED"],
   COMPLETED: ["DELIVERED", "COMPLETED"],
-  FAILED: ["FAILED", "REJECTED", "CANCELLED"],
+  FAILED: ["FAILED", "REJECTED", "CANCELLED", "UNABLE_TO_DELIVER"],
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -98,6 +105,33 @@ function getImg(order: Order) {
   return order.orderItems[0]?.product?.imageUrls?.[0] ?? order.orderItems[0]?.product?.images?.[0];
 }
 
+function getCustomerName(order: Order) {
+  const c = order.user ?? order.buyer;
+  return c ? `${c.firstName} ${c.lastName}` : "—";
+}
+
+function getCustomerPhone(order: Order) {
+  return order.user?.phone ?? order.buyer?.phone ?? "—";
+}
+
+function getDeliveryInfo(order: Order) {
+  // notes field contains "Pickup location: [name]" when customer chose pickup
+  if (order.notes?.startsWith("Pickup location:")) {
+    return order.notes;
+  }
+  if (order.deliveryType === "PICKUP" || order.pickupLocation) {
+    return `Pickup: ${order.pickupLocation ?? "—"}`;
+  }
+  return order.deliveryAddress ?? "—";
+}
+
+function getProductName(order: Order) {
+  const items = order.orderItems;
+  if (!items.length) return "—";
+  if (items.length === 1) return `${items[0].quantity}pcs ${items[0].product.name}`;
+  return `${items[0].quantity}pcs ${items[0].product.name} +${items.length - 1} more`;
+}
+
 // ── Backdrop ───────────────────────────────────────────────────────────────
 
 function Backdrop({ onClose }: { onClose: () => void }) {
@@ -106,12 +140,18 @@ function Backdrop({ onClose }: { onClose: () => void }) {
 
 // ── Accept modal (date only, max 5 days from order creation) ───────────────
 
-function AcceptModal({ order, onClose, onConfirm, isLoading }: {
-  order: Order; onClose: () => void; onConfirm: (date: string) => void; isLoading: boolean;
+function AcceptModal({ order, onClose, onConfirm, isLoading, maxPreorderDays, vendorSaleType }: {
+  order: Order; onClose: () => void; onConfirm: (date: string) => void; isLoading: boolean; maxPreorderDays?: number; vendorSaleType?: string;
 }) {
   const [date, setDate] = useState("");
-  const minDate = new Date(order.createdAt).toISOString().split("T")[0];
-  const maxDate = new Date(new Date(order.createdAt).getTime() + 5 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const today = new Date();
+  const minDate = today.toISOString().split("T")[0];
+  // Check order saleType first, then fall back to vendor's signup saleType
+  const isPreorder =
+    order.saleType === "PREORDER" ||
+    (order.saleType !== "IN_STOCK" && vendorSaleType === "PREORDER");
+  const maxDays = isPreorder ? (maxPreorderDays ?? 30) : 3;
+  const maxDate = new Date(new Date(order.createdAt).getTime() + maxDays * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
   return (
     <>
@@ -124,7 +164,11 @@ function AcceptModal({ order, onClose, onConfirm, isLoading }: {
             </div>
           </button>
           <p className="font-jakarta font-bold text-[16px] text-[#333333] tracking-[-0.04em] mb-[4px]">Set Delivery Date</p>
-          <p className="font-jakarta text-[12px] text-[#9B9B9B] tracking-[-0.04em] mb-[12px]">Must be within 5 days of order placement.</p>
+          <p className="font-jakarta text-[12px] text-[#9B9B9B] tracking-[-0.04em] mb-[12px]">
+            {isPreorder
+              ? `Must be within ${maxDays} days of order placement (your preorder window).`
+              : "Must be within 3 days of order placement."}
+          </p>
           <input
             type="date"
             value={date}
@@ -211,7 +255,7 @@ function DetailModal({ order, tab, onClose }: { order: Order; tab: "COMPLETED" |
           <div className="flex flex-col gap-[10px]">
             <p className="font-jakarta text-[13px] text-[#333333] tracking-[-0.04em]">
               <span className="font-bold">Customer Name:</span>{" "}
-              <span className="text-[#9B9B9B]">{order.user ? `${order.user.firstName} ${order.user.lastName}` : "—"}</span>
+              <span className="text-[#9B9B9B]">{getCustomerName(order)}</span>
             </p>
 
             <div>
@@ -227,19 +271,19 @@ function DetailModal({ order, tab, onClose }: { order: Order; tab: "COMPLETED" |
             </div>
 
             <p className="font-jakarta text-[13px] text-[#333333] tracking-[-0.04em]">
-              <span className="font-bold">Delivery Address:</span>{" "}
-              <span className="text-[#9B9B9B]">{order.deliveryAddress ?? "—"}</span>
+              <span className="font-bold">Delivery:</span>{" "}
+              <span className="text-[#9B9B9B]">{getDeliveryInfo(order)}</span>
             </p>
 
             {isCompleted ? (
               <>
                 <p className="font-jakarta text-[13px] text-[#333333] tracking-[-0.04em]">
                   <span className="font-bold">Date Delivered:</span>{" "}
-                  <span className="text-[#9B9B9B]">{formatDate(order.deliveredAt)}</span>
+                  <span className="text-[#9B9B9B]">{formatDate(order.deliveredAt ?? order.updatedAt)}</span>
                 </p>
                 <p className="font-jakarta text-[13px] text-[#333333] tracking-[-0.04em]">
                   <span className="font-bold">Time Delivered:</span>{" "}
-                  <span className="text-[#9B9B9B]">{formatTime(order.deliveredAt)}</span>
+                  <span className="text-[#9B9B9B]">{formatTime(order.deliveredAt ?? order.updatedAt)}</span>
                 </p>
               </>
             ) : (
@@ -285,7 +329,11 @@ function IncomingCard({ order, onAccept, onDecline }: {
       <div className="flex flex-col gap-[8px] mb-[14px]">
         <p className="font-jakarta text-[13px] text-[#333333] tracking-[-0.04em]">
           <span className="font-semibold">Customer Name:</span>{" "}
-          <span className="text-[#9B9B9B]">{order.user ? `${order.user.firstName} ${order.user.lastName}` : "—"}</span>
+          <span className="text-[#9B9B9B]">{getCustomerName(order)}</span>
+        </p>
+        <p className="font-jakarta text-[13px] text-[#333333] tracking-[-0.04em]">
+          <span className="font-semibold">Customer Phone:</span>{" "}
+          <span className="text-[#9B9B9B]">{getCustomerPhone(order)}</span>
         </p>
         <div>
           <p className="font-jakarta text-[13px] font-semibold text-[#333333] tracking-[-0.04em] mb-[8px]">Order Information:</p>
@@ -294,13 +342,13 @@ function IncomingCard({ order, onAccept, onDecline }: {
               {img && <Image src={img} alt={item.product.name} fill className="object-cover" sizes="56px" />}
             </div>
             <p className="font-jakarta text-[13px] text-[#333333] tracking-[-0.04em]">
-              <span className="font-bold">{item.quantity}pcs</span> {item.product.name}
+              {getProductName(order)}
             </p>
           </div>
         </div>
         <p className="font-jakarta text-[13px] text-[#333333] tracking-[-0.04em]">
-          <span className="font-semibold">Delivery Address:</span>{" "}
-          <span className="text-[#9B9B9B]">{order.deliveryAddress ?? "—"}</span>
+          <span className="font-semibold">Delivery:</span>{" "}
+          <span className="text-[#9B9B9B]">{getDeliveryInfo(order)}</span>
         </p>
         <p className="font-jakarta text-[13px] text-[#333333] tracking-[-0.04em]">
           <span className="font-semibold">Type:</span>{" "}
@@ -342,7 +390,11 @@ function OngoingCard({ order, onDelivered, onFailed, isDeliveredLoading, isFaile
       <div className="flex flex-col gap-[8px] mb-[14px]">
         <p className="font-jakarta text-[13px] text-[#333333] tracking-[-0.04em]">
           <span className="font-semibold">Customer Name:</span>{" "}
-          <span className="text-[#9B9B9B]">{order.user ? `${order.user.firstName} ${order.user.lastName}` : "—"}</span>
+          <span className="text-[#9B9B9B]">{getCustomerName(order)}</span>
+        </p>
+        <p className="font-jakarta text-[13px] text-[#333333] tracking-[-0.04em]">
+          <span className="font-semibold">Customer Phone:</span>{" "}
+          <span className="text-[#9B9B9B]">{getCustomerPhone(order)}</span>
         </p>
         <div>
           <p className="font-jakarta text-[13px] font-semibold text-[#333333] tracking-[-0.04em] mb-[8px]">Order Information:</p>
@@ -351,17 +403,17 @@ function OngoingCard({ order, onDelivered, onFailed, isDeliveredLoading, isFaile
               {img && <Image src={img} alt={item.product.name} fill className="object-cover" sizes="56px" />}
             </div>
             <p className="font-jakarta text-[13px] text-[#333333] tracking-[-0.04em]">
-              <span className="font-semibold">{item.quantity}pcs</span> {item.product.name}
+              {getProductName(order)}
             </p>
           </div>
         </div>
         <p className="font-jakarta text-[13px] text-[#333333] tracking-[-0.04em]">
-          <span className="font-semibold">Delivery Address:</span>{" "}
-          <span className="text-[#9B9B9B]">{order.deliveryAddress ?? "—"}</span>
+          <span className="font-semibold">Delivery:</span>{" "}
+          <span className="text-[#9B9B9B]">{getDeliveryInfo(order)}</span>
         </p>
         <p className="font-jakarta text-[13px] text-[#333333] tracking-[-0.04em]">
           <span className="font-semibold">Expected Delivery Date:</span>{" "}
-          <span className="text-[#9B9B9B]">{formatDate(order.expectedDelivery)}</span>
+          <span className="text-[#9B9B9B]">{formatDate(order.expectedDelivery ?? order.expectedDeliveryDate)}</span>
         </p>
         <p className="font-jakarta text-[13px] text-[#333333] tracking-[-0.04em]">
           <span className="font-semibold">Type:</span>{" "}
@@ -431,6 +483,12 @@ export default function VendorOrdersPage() {
     enabled: !isMock,
   });
 
+  const { data: vendorProfile } = useQuery({
+    queryKey: ["vendor-profile"],
+    queryFn: async () => { const { data } = await apiClient.get("/vendors/me/profile"); return data?.data ?? data; },
+    enabled: !isMock,
+  });
+
   const allOrders = isMock ? MOCK_ORDERS : (orders ?? []);
   const tabOrders = allOrders.filter((o) => STATUS_MAP[activeTab].includes(o.status));
 
@@ -445,7 +503,10 @@ export default function VendorOrdersPage() {
       queryClient.invalidateQueries({ queryKey: ["vendor-orders"] });
       setAcceptingOrder(null);
     },
-    onError: () => toast.error("Failed to accept order."),
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg ?? "Failed to accept order.");
+    },
   });
 
   const declineMutation = useMutation({
@@ -465,7 +526,7 @@ export default function VendorOrdersPage() {
       await apiClient.patch(`/orders/${orderId}/status`, { status });
     },
     onSuccess: (_, vars) => {
-      toast.success(vars.status === "DELIVERED" ? "Order marked as delivered!" : "Order marked as failed.");
+      toast.success(vars.status === "DELIVERED" ? "Order marked as delivered!" : "Order marked as unable to deliver.");
       queryClient.invalidateQueries({ queryKey: ["vendor-orders"] });
       setActionLoadingId(null);
     },
@@ -556,7 +617,7 @@ export default function VendorOrdersPage() {
               onFailed={() => {
                 if (isMock) { toast.success("Marked as failed. (mock)"); return; }
                 setActionLoadingId(`${order.id}-failed`);
-                statusMutation.mutate({ orderId: order.id, status: "FAILED" });
+                statusMutation.mutate({ orderId: order.id, status: "CANCELLED" });
               }}
             />
           ))
@@ -577,6 +638,8 @@ export default function VendorOrdersPage() {
           order={acceptingOrder}
           onClose={() => setAcceptingOrder(null)}
           isLoading={acceptMutation.isPending}
+          maxPreorderDays={vendorProfile?.maxPreorderDays ?? undefined}
+          vendorSaleType={vendorProfile?.saleType ?? undefined}
           onConfirm={(date) => {
             if (isMock) { toast.success("Order accepted! (mock)"); setAcceptingOrder(null); return; }
             acceptMutation.mutate({ orderId: acceptingOrder.id, date });

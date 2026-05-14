@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ChevronLeft, Plus, Eye, EyeOff, X } from "lucide-react";
+import { ChevronLeft, Plus, Eye, EyeOff, X, Trash2, MapPin } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "sonner";
@@ -16,6 +16,12 @@ interface Campus {
   code?: string;
   location?: string;
   isActive: boolean;
+}
+
+interface PickupLocation {
+  id: string;
+  name: string;
+  description?: string;
 }
 interface Vendor { id: string; storeName: string; status: string; createdAt: string; user?: { firstName: string; lastName: string } }
 interface Student { id: string; firstName: string; lastName: string; email: string; isVerified: boolean; createdAt: string }
@@ -226,6 +232,9 @@ export default function UniversityDetailPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [showCreateAdmin, setShowCreateAdmin] = useState(false);
+  const [showAddLocation, setShowAddLocation] = useState(false);
+  const [newLocationName, setNewLocationName] = useState("");
+  const [newLocationDesc, setNewLocationDesc] = useState("");
 
   const { data: campus } = useQuery<Campus>({
     queryKey: ["superadmin-campus", id],
@@ -234,17 +243,47 @@ export default function UniversityDetailPage() {
   const { data: admins, refetch: refetchAdmins } = useQuery<Admin[]>({
     queryKey: ["superadmin-campus-admins", id],
     queryFn: async () => {
-      const { data } = await apiClient.get(`/users?role=admin&campusId=${id}`);
+      const { data } = await apiClient.get("/users/admins", { params: { campusId: id } });
       return data?.data ?? data ?? [];
     },
   });
   const { data: vendors } = useQuery<Vendor[]>({
     queryKey: ["superadmin-campus-vendors", id],
-    queryFn: async () => { const { data } = await apiClient.get(`/vendors?campusId=${id}`); return data?.data ?? data ?? []; },
+    queryFn: async () => { const { data } = await apiClient.get(`/vendors`, { params: { campusId: id } }); return data?.data ?? data ?? []; },
   });
   const { data: students } = useQuery<Student[]>({
     queryKey: ["superadmin-campus-students", id],
-    queryFn: async () => { const { data } = await apiClient.get(`/users?campusId=${id}`); return data?.data ?? data ?? []; },
+    queryFn: async () => { const { data } = await apiClient.get(`/users/students`, { params: { campusId: id } }); return data?.data ?? data ?? []; },
+  });
+
+  const { data: pickupLocations, refetch: refetchLocations } = useQuery<PickupLocation[]>({
+    queryKey: ["superadmin-campus-pickup-locations", id],
+    queryFn: async () => { const { data } = await apiClient.get(`/campuses/${id}/pickup-locations`); return data?.data ?? data ?? []; },
+  });
+
+  const addLocationMutation = useMutation({
+    mutationFn: async () => {
+      await apiClient.post(`/campuses/${id}/pickup-locations`, {
+        name: newLocationName.trim(),
+        ...(newLocationDesc.trim() && { description: newLocationDesc.trim() }),
+      });
+    },
+    onSuccess: () => {
+      toast.success("Pickup location added.");
+      refetchLocations();
+      setShowAddLocation(false);
+      setNewLocationName("");
+      setNewLocationDesc("");
+    },
+    onError: () => toast.error("Failed to add pickup location."),
+  });
+
+  const deleteLocationMutation = useMutation({
+    mutationFn: async (locationId: string) => {
+      await apiClient.delete(`/campuses/${id}/pickup-locations/${locationId}`);
+    },
+    onSuccess: () => { toast.success("Pickup location removed."); refetchLocations(); },
+    onError: () => toast.error("Failed to remove pickup location."),
   });
 
   const c   = campus   ?? MOCK_CAMPUS;
@@ -343,6 +382,43 @@ export default function UniversityDetailPage() {
         />
       </div>
 
+      {/* Pickup Locations */}
+      <div className="bg-white rounded-[12px] border border-[#EAEAEA] overflow-hidden mb-[24px]">
+        <div className="flex items-center justify-between px-[20px] py-[14px] border-b border-[#EAEAEA]">
+          <div className="flex items-center gap-[8px]">
+            <MapPin size={16} className="text-[#2E7D32]" />
+            <p className="font-satoshi font-bold text-[14px] text-[#151515]">
+              Pickup Locations ({pickupLocations?.length ?? 0})
+            </p>
+          </div>
+          <button type="button" onClick={() => setShowAddLocation(true)}
+            className="font-jakarta text-[12px] font-semibold text-[#2E7D32] hover:underline flex items-center gap-[4px]">
+            <Plus size={12} /> Add Location
+          </button>
+        </div>
+        {!pickupLocations?.length ? (
+          <div className="px-[20px] py-[24px] text-center">
+            <p className="font-jakarta text-[13px] text-[#9B9B9B]">No pickup locations yet. Add at least one so customers can select a pickup point during checkout.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-[#EAEAEA]">
+            {pickupLocations.map((loc) => (
+              <div key={loc.id} className="px-[20px] py-[12px] flex items-center justify-between">
+                <div>
+                  <p className="font-jakarta font-semibold text-[13px] text-[#151515]">{loc.name}</p>
+                  {loc.description && <p className="font-jakarta text-[11px] text-[#9B9B9B]">{loc.description}</p>}
+                </div>
+                <button type="button" onClick={() => deleteLocationMutation.mutate(loc.id)}
+                  disabled={deleteLocationMutation.isPending}
+                  className="w-[32px] h-[32px] rounded-full bg-[#FFEBEE] flex items-center justify-center hover:bg-[#FFCDD2] transition-colors disabled:opacity-50">
+                  <Trash2 size={14} className="text-[#E53935]" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Students */}
       <div>
         <p className="font-satoshi font-bold text-[16px] text-[#151515] mb-[12px]">Students ({ss.length})</p>
@@ -367,6 +443,43 @@ export default function UniversityDetailPage() {
           onClose={() => setShowCreateAdmin(false)}
           onCreated={handleAdminCreated}
         />
+      )}
+
+      {/* Add Pickup Location Modal */}
+      {showAddLocation && (
+        <>
+          <div className="fixed inset-0 bg-black/60 z-40" onClick={() => setShowAddLocation(false)} />
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-[24px]">
+            <div className="bg-white rounded-[16px] px-[24px] pt-[24px] pb-[28px] w-full max-w-[420px]">
+              <p className="font-satoshi font-bold text-[16px] text-[#151515] mb-[20px]">Add Pickup Location</p>
+              <div className="flex flex-col gap-[14px] mb-[20px]">
+                <div>
+                  <label className="font-jakarta text-[12px] font-bold text-[#151515] block mb-[6px]">Location Name <span className="text-[#E53935]">*</span></label>
+                  <input type="text" value={newLocationName} onChange={(e) => setNewLocationName(e.target.value)}
+                    placeholder="e.g Main Gate, Library Front, Student Union"
+                    className="w-full rounded-[8px] border border-[#EAEAEA] bg-[#F7FFF8] px-[12px] py-[10px] font-jakarta text-[13px] text-[#333333] placeholder:text-[#C2C2C2] focus:outline-none focus:border-[#2E7D32]" />
+                </div>
+                <div>
+                  <label className="font-jakarta text-[12px] font-bold text-[#151515] block mb-[6px]">Description <span className="font-normal text-[#9B9B9B]">(optional)</span></label>
+                  <input type="text" value={newLocationDesc} onChange={(e) => setNewLocationDesc(e.target.value)}
+                    placeholder="e.g Near the security post"
+                    className="w-full rounded-[8px] border border-[#EAEAEA] bg-[#F7FFF8] px-[12px] py-[10px] font-jakarta text-[13px] text-[#333333] placeholder:text-[#C2C2C2] focus:outline-none focus:border-[#2E7D32]" />
+                </div>
+              </div>
+              <div className="flex gap-[10px]">
+                <button type="button" onClick={() => setShowAddLocation(false)}
+                  className="flex-1 h-[44px] rounded-[8px] border border-[#EAEAEA] font-jakarta text-[13px] font-semibold text-[#545454] hover:bg-[#F7FFF8] transition-colors">
+                  Cancel
+                </button>
+                <button type="button" onClick={() => addLocationMutation.mutate()}
+                  disabled={!newLocationName.trim() || addLocationMutation.isPending}
+                  className="flex-1 h-[44px] rounded-[8px] bg-[#2E7D32] font-jakarta text-[13px] font-semibold text-white disabled:opacity-50 hover:bg-[#1D5620] transition-colors">
+                  {addLocationMutation.isPending ? "Adding..." : "Add Location"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </SuperAdminLayout>
   );

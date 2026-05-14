@@ -17,6 +17,10 @@ interface Campus {
   name: string;
 }
 
+const FALLBACK_CAMPUSES: Campus[] = [
+  { id: "a9284b2f-5242-4133-82a0-a0c2c0720a62", name: "Crawford University" },
+];
+
 interface ApiCategory {
   id: string;
   name: string;
@@ -99,6 +103,7 @@ export default function VendorSignupPage() {
 
   // Categories from API
   const [apiCategories, setApiCategories] = useState<ApiCategory[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
 
   // Step 2 state
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
@@ -120,25 +125,25 @@ export default function VendorSignupPage() {
 
   // Load campuses and categories on mount
   useEffect(() => {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
-
-    apiClient.get<Campus[]>("/campuses", { signal: controller.signal })
-      .then((res) => {
-        const data = Array.isArray(res.data) ? res.data : [];
-        setCampuses(data.length ? data : [{ id: "", name: "Crawford University" }]);
+    fetch("/api/campuses")
+      .then((r) => r.json())
+      .then((raw) => {
+        const data: Campus[] = Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
+        setCampuses(data.length ? data : FALLBACK_CAMPUSES);
       })
-      .catch(() => setCampuses([{ id: "", name: "Crawford University" }]))
-      .finally(() => { clearTimeout(timeout); setCampusesLoading(false); });
+      .catch(() => setCampuses(FALLBACK_CAMPUSES))
+      .finally(() => setCampusesLoading(false));
 
-    apiClient.get<ApiCategory[]>("/categories")
-      .then((res) => {
-        const data = Array.isArray(res.data) ? res.data : [];
+    fetch("/api/categories")
+      .then((r) => r.json())
+      .then((raw) => {
+        const data: ApiCategory[] = Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
         setApiCategories(data);
       })
-      .catch(() => setApiCategories([]));
+      .catch(() => setApiCategories([]))
+      .finally(() => setCategoriesLoading(false));
 
-    return () => { controller.abort(); clearTimeout(timeout); };
+    return () => {};
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -187,39 +192,48 @@ export default function VendorSignupPage() {
 
     setIsLoading(true);
     try {
-      // Step A — upload student ID first, get Cloudinary URL
+      // Step A — upload student ID
       const formData = new FormData();
-      formData.append("file", studentIdFile);  // field name must be 'file'
-      const uploadRes = await apiClient.post<{ url: string; data?: { url: string } }>(
-        "/upload/image",
-        formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
-      );
-      const studentIdUrl = uploadRes.data?.url ?? uploadRes.data?.data?.url;
-
-      // Step B — single call to POST /vendors/register with full payload
-      await apiClient.post("/vendors/register", {
-        firstName:      step1Data.firstName,
-        lastName:       step1Data.lastName,
-        storeName:      step1Data.storeName,
-        phone:          step1Data.phone,
-        email:          step1Data.email,
-        campusId:       step1Data.campusId,
-        categoryIds:    selectedCategoryIds,
-        itemsSold:      itemsSold,
-        saleType:       saleType,
-        ...(saleType !== "IN_STOCK" && maxPreorderDays ? { maxPreorderDays } : {}),
-        matricNumber:   data.matricNumber,
-        password:       data.password,
-        ...(studentIdUrl ? { studentIdUrl } : {}),
+      formData.append("file", studentIdFile);
+      const uploadRes = await fetch("/api/upload/image", {
+        method: "POST",
+        body: formData,
       });
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok) throw new Error("Failed to upload student ID. Please try again.");
+      const studentIdUrl = uploadData?.url ?? uploadData?.data?.url;
+      if (!studentIdUrl) throw new Error("Upload succeeded but no URL returned. Please try again.");
+
+      // Step B — register vendor
+      const res = await fetch("/api/vendors/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName:    step1Data.firstName,
+          lastName:     step1Data.lastName,
+          storeName:    step1Data.storeName,
+          phone:        step1Data.phone,
+          email:        step1Data.email,
+          campusId:     step1Data.campusId,
+          categoryIds:  selectedCategoryIds,
+          itemsSold:    itemsSold,
+          saleType:     saleType,
+          ...(saleType !== "IN_STOCK" && maxPreorderDays ? { maxPreorderDays } : {}),
+          matricNumber: data.matricNumber,
+          password:     data.password,
+          studentIdUrl,
+        }),
+      });
+      const resData = await res.json();
+      if (!res.ok) {
+        const msg = resData?.message;
+        throw new Error(Array.isArray(msg) ? msg.join(". ") : (msg ?? "Registration failed"));
+      }
 
       setShowSuccess(true);
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string | string[] } } })
-          ?.response?.data?.message ?? "Something went wrong. Please try again.";
-      toast.error(Array.isArray(msg) ? msg.join(". ") : String(msg));
+      const msg = (err as Error)?.message ?? "Something went wrong. Please try again.";
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }
@@ -343,8 +357,10 @@ export default function VendorSignupPage() {
             <label className="font-jakarta text-[14px] font-medium text-[#333333] tracking-[-0.04em]">
               What categories do you sell in?<span className="text-[#FDC500]">*</span>
             </label>
-            {apiCategories.length === 0 ? (
+            {categoriesLoading ? (
               <p className="font-jakarta text-[13px] text-[#9B9B9B]">Loading categories...</p>
+            ) : apiCategories.length === 0 ? (
+              <p className="font-jakarta text-[13px] text-[#E53935]">Failed to load categories. Please refresh.</p>
             ) : (
               <div className="flex flex-wrap gap-[8px]">
                 {apiCategories.map((cat) => {

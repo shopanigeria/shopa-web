@@ -4,9 +4,12 @@ import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { Check } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import ScreenHeader from "@/components/layout/ScreenHeader";
 import BackButton from "@/components/layout/BackButton";
 import { useCartStore } from "@/stores/cart.store";
+import { useAuthStore } from "@/stores/auth.store";
+import { apiClient } from "@/lib/api/client";
 import { ordersService } from "@/lib/api/services/orders.service";
 import { calculateServiceFee } from "@/lib/utils";
 import { formatNaira } from "@/lib/utils";
@@ -14,11 +17,7 @@ import { toast } from "sonner";
 
 type DeliveryType = "pickup" | "delivery";
 
-const PICKUP_LOCATIONS = [
-  { id: "loc-1", name: "Main Gate" },
-  { id: "loc-2", name: "Library Front" },
-  { id: "loc-3", name: "Student Union" },
-];
+interface PickupLocation { id: string; name: string; description?: string; }
 
 function RadioOption({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
   return (
@@ -57,6 +56,32 @@ function CheckoutContent() {
   const subtotal = Number(searchParams.get("subtotal") ?? 0);
 
   const { items, clearCart } = useCartStore();
+  const { user } = useAuthStore();
+
+  // Defer store reads to client-only to avoid hydration mismatch
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
+  const campusId = mounted ? (user?.campus?.id ?? user?.campusId) : undefined;
+
+  // Fetch pickup locations — also try from /users/me if campusId not in store yet
+  const { data: freshUser } = useQuery({
+    queryKey: ["user-me-checkout"],
+    queryFn: async () => { const { data } = await apiClient.get("/users/me"); return data; },
+    enabled: mounted && !campusId,
+    staleTime: 0,
+  });
+
+  const resolvedCampusId = campusId ?? freshUser?.campusId ?? freshUser?.campus?.id;
+
+  const { data: pickupLocations } = useQuery<PickupLocation[]>({
+    queryKey: ["pickup-locations", resolvedCampusId],
+    queryFn: async () => {
+      const { data } = await apiClient.get(`/campuses/${resolvedCampusId}/pickup-locations`);
+      return data?.data ?? data ?? [];
+    },
+    enabled: !!resolvedCampusId,
+  });
 
   const [deliveryType, setDeliveryType] = useState<DeliveryType>("delivery");
   const [address, setAddress] = useState("");
@@ -124,7 +149,7 @@ function CheckoutContent() {
         quantity: i.quantity,
       }));
 
-      const pickupLoc = PICKUP_LOCATIONS.find((l) => l.id === selectedPickup);
+      const pickupLoc = (pickupLocations ?? []).find((l) => l.id === selectedPickup);
 
       const order = await ordersService.create({
         items: orderItems,
@@ -195,14 +220,20 @@ function CheckoutContent() {
               <p className="mb-[8px] font-jakarta text-[14px] font-medium text-[#333333] leading-[1.26] tracking-[-0.04em]">
                 Select Pickup Location <span className="text-[#FDC500]">*</span>
               </p>
-              {PICKUP_LOCATIONS.map((loc) => (
-                <RadioOption
-                  key={loc.id}
-                  label={loc.name}
-                  selected={selectedPickup === loc.id}
-                  onPress={() => setSelectedPickup(loc.id)}
-                />
-              ))}
+              {!resolvedCampusId ? (
+                <p className="font-jakarta text-[13px] text-[#9B9B9B]">Loading pickup locations...</p>
+              ) : !pickupLocations?.length ? (
+                <p className="font-jakarta text-[13px] text-[#9B9B9B]">No pickup locations set up for your campus yet.</p>
+              ) : (
+                pickupLocations.map((loc) => (
+                  <RadioOption
+                    key={loc.id}
+                    label={loc.description ? `${loc.name} — ${loc.description}` : loc.name}
+                    selected={selectedPickup === loc.id}
+                    onPress={() => setSelectedPickup(loc.id)}
+                  />
+                ))
+              )}
               <p className="mt-[8px] font-jakarta text-[12px] text-[#9B9B9B] leading-[1.5] tracking-[-0.04em]">
                 Please note that your delivery will take between 24-72 hours after order confirmation
               </p>

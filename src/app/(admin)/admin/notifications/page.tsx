@@ -128,7 +128,7 @@ export default function AdminNotificationsPage() {
   const unreadCount = items.filter((n) => !n.isRead).length;
 
   return (
-    <AdminLayout campusName="Crawford University">
+    <AdminLayout >
       {/* Header */}
       <div className="flex items-center justify-between mb-[24px]">
         <div>

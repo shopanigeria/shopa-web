@@ -27,11 +27,14 @@ interface Category {
 interface VendorProduct {
   id: string;
   name: string;
+  description?: string;
   price: number;
   stock: number;
-  isAvailable: boolean;
+  isAvailable?: boolean;
+  isActive?: boolean;
   saleType?: "PREORDER" | "IN_STOCK";
   imageUrls?: string[];
+  images?: string[];
   category?: { id: string; name: string };
   subCategory?: { id: string; name: string };
   categoryId?: string;
@@ -116,7 +119,7 @@ function SuccessModal({ message, onClose }: { message: string; onClose: () => vo
     <>
       <Backdrop onClose={onClose} />
       <div className="fixed inset-0 z-50 flex items-center justify-center px-[24px]">
-        <div className="bg-white rounded-[16px] px-[32px] pt-[32px] pb-[32px] w-full max-w-[360px] relative flex flex-col items-center">
+        <div className="bg-white rounded-[16px] px-[16px] sm:px-[32px] pt-[32px] pb-[32px] w-full max-w-[360px] relative flex flex-col items-center">
           <button
             type="button"
             aria-label="Close"
@@ -145,36 +148,63 @@ interface ProductFormProps {
   mode: "add" | "edit";
   product?: VendorProduct;
   categories: Category[];
+  vendorSaleType?: string;
+  vendorMaxPreorderDays?: number;
   onBack: () => void;
   onSuccess: () => void;
   isMock: boolean;
 }
 
-function ProductForm({ mode, product, categories, onBack, onSuccess, isMock }: ProductFormProps) {
+function ProductForm({ mode, product, categories, vendorSaleType, vendorMaxPreorderDays, onBack, onSuccess, isMock }: ProductFormProps) {
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState(product?.name ?? "");
+  const [description, setDescription] = useState(product?.description ?? "");
   const [categoryId, setCategoryId] = useState(product?.category?.id ?? product?.categoryId ?? "");
   const [subCategoryId, setSubCategoryId] = useState(product?.subCategory?.id ?? product?.subCategoryId ?? "");
+
+  // Fetch real subcategories from API when a category is selected
+  const { data: apiSubcategories } = useQuery<SubCategory[]>({
+    queryKey: ["subcategories", categoryId],
+    queryFn: async () => {
+      const { data } = await apiClient.get(`/categories/${categoryId}/subcategories`);
+      const arr = Array.isArray(data) ? data : (data?.data ?? []);
+      return arr as SubCategory[];
+    },
+    enabled: !!categoryId,
+    staleTime: 10 * 60 * 1000,
+  });
   const [price, setPrice] = useState(product ? String(product.price) : "");
   const [quantity, setQuantity] = useState(product ? String(product.stock) : "");
-  const [isAvailable, setIsAvailable] = useState(product?.isAvailable ?? true);
-  const [saleType, setSaleType] = useState<"PREORDER" | "IN_STOCK">(product?.saleType ?? "IN_STOCK");
+  const [isAvailable, setIsAvailable] = useState(product?.isAvailable ?? product?.isActive ?? true);
+  const existingImage = product?.imageUrls?.[0] ?? product?.images?.[0] ?? null;
+  const canChooseSaleType = vendorSaleType === "BOTH";
+  const defaultSaleType: "PREORDER" | "IN_STOCK" =
+    vendorSaleType === "PREORDER" ? "PREORDER" :
+    vendorSaleType === "IN_STOCK" ? "IN_STOCK" :
+    product?.saleType ?? "IN_STOCK";
+  const [saleType, setSaleType] = useState<"PREORDER" | "IN_STOCK">(defaultSaleType);
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(product?.imageUrls?.[0] ?? null);
+  const [imagePreview, setImagePreview] = useState<string | null>(existingImage);
   const [submitting, setSubmitting] = useState(false);
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    const allowed = ["image/jpeg", "image/jpg", "image/png"];
+    if (!allowed.includes(file.type)) {
+      toast.error("Only JPEG, JPG or PNG images are allowed.");
+      e.target.value = "";
+      return;
+    }
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
   }
 
   async function handleSubmit() {
-    if (!name.trim() || !price || !quantity) {
-      toast.error("Please fill in all required fields.");
+    if (!name.trim() || !description.trim() || !price || !quantity) {
+      toast.error("Please fill in all required fields including description.");
       return;
     }
     if (isMock) {
@@ -187,8 +217,8 @@ function ProductForm({ mode, product, categories, onBack, onSuccess, isMock }: P
       let imageUrl: string | undefined;
       if (imageFile) {
         const fd = new FormData();
-        fd.append("image", imageFile);
-        const { data } = await apiClient.post("/upload/image", fd, {
+        fd.append("file", imageFile);
+        const { data } = await apiClient.post("/upload/image?folder=shopa/products&removeBackground=true", fd, {
           headers: { "Content-Type": "multipart/form-data" },
         });
         imageUrl = data?.url ?? data?.data?.url;
@@ -196,13 +226,14 @@ function ProductForm({ mode, product, categories, onBack, onSuccess, isMock }: P
 
       const payload: Record<string, unknown> = {
         name: name.trim(),
+        description: description.trim(),
         price: parseFloat(price),
         stock: parseInt(quantity, 10),
-        isAvailable,
+        isActive: isAvailable,
         saleType,
         ...(categoryId && { categoryId }),
         ...(subCategoryId && { subCategoryId }),
-        ...(imageUrl && { imageUrls: [imageUrl] }),
+        ...(imageUrl && { images: [imageUrl] }),
       };
 
       if (mode === "add") {
@@ -247,6 +278,20 @@ function ProductForm({ mode, product, categories, onBack, onSuccess, isMock }: P
           />
         </div>
 
+        {/* Description */}
+        <div>
+          <label className="font-jakarta text-[13px] font-semibold text-[#333333] tracking-[-0.04em] mb-[5px] block">
+            Product Description <span className="text-[#FDC500]">*</span>
+          </label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Describe your product — size, colour, condition, etc."
+            rows={3}
+            className="w-full rounded-[8px] border border-[#EAEAEA] bg-white px-[14px] py-[14px] font-jakarta text-[12px] text-[#333333] placeholder:text-[#C2C2C2] focus:outline-none focus:border-[#2E7D32] resize-none"
+          />
+        </div>
+
         {/* Category — only shown for add */}
         {mode === "add" && (
           <div>
@@ -272,7 +317,7 @@ function ProductForm({ mode, product, categories, onBack, onSuccess, isMock }: P
 
         {/* Sub-category — only shown for add, only when category has sub-categories */}
         {mode === "add" && (() => {
-          const subs = categories.find((c) => c.id === categoryId)?.subCategories ?? [];
+          const subs = apiSubcategories ?? [];
           if (!categoryId || subs.length === 0) return null;
           return (
             <div>
@@ -359,70 +404,82 @@ function ProductForm({ mode, product, categories, onBack, onSuccess, isMock }: P
           </div>
         </div>
 
-        {/* Sale type — only shown for add */}
-        {mode === "add" && (
-          <div>
-            <label className="font-jakarta text-[13px] font-semibold text-[#333333] tracking-[-0.04em] mb-[10px] block">
-              Product sale type <span className="text-[#FDC500]">*</span>
-            </label>
+        {/* Sale type */}
+        <div>
+          <label className="font-jakarta text-[13px] font-semibold text-[#333333] tracking-[-0.04em] mb-[10px] block">
+            Product sale type <span className="text-[#FDC500]">*</span>
+          </label>
+          {canChooseSaleType ? (
             <div className="flex items-center gap-[24px]">
               <label className="flex items-center gap-[8px] cursor-pointer">
-                <div
-                  onClick={() => setSaleType("PREORDER")}
-                  className={`w-[20px] h-[20px] rounded-full border-2 flex items-center justify-center cursor-pointer ${saleType === "PREORDER" ? "border-[#2E7D32] bg-[#2E7D32]" : "border-[#9B9B9B]"}`}
-                >
-                  {saleType === "PREORDER" && <div className="w-[8px] h-[8px] rounded-full bg-white" />}
-                </div>
-                <span className="font-jakarta text-[12px] text-[#333333]">Preorder</span>
-              </label>
-              <label className="flex items-center gap-[8px] cursor-pointer">
-                <div
-                  onClick={() => setSaleType("IN_STOCK")}
-                  className={`w-[20px] h-[20px] rounded-full border-2 flex items-center justify-center cursor-pointer ${saleType === "IN_STOCK" ? "border-[#2E7D32] bg-[#2E7D32]" : "border-[#9B9B9B]"}`}
-                >
+                <div onClick={() => setSaleType("IN_STOCK")}
+                  className={`w-[20px] h-[20px] rounded-full border-2 flex items-center justify-center cursor-pointer ${saleType === "IN_STOCK" ? "border-[#2E7D32] bg-[#2E7D32]" : "border-[#9B9B9B]"}`}>
                   {saleType === "IN_STOCK" && <div className="w-[8px] h-[8px] rounded-full bg-white" />}
                 </div>
                 <span className="font-jakarta text-[12px] text-[#333333]">In Stock</span>
               </label>
+              <label className="flex items-center gap-[8px] cursor-pointer">
+                <div onClick={() => setSaleType("PREORDER")}
+                  className={`w-[20px] h-[20px] rounded-full border-2 flex items-center justify-center cursor-pointer ${saleType === "PREORDER" ? "border-[#2E7D32] bg-[#2E7D32]" : "border-[#9B9B9B]"}`}>
+                  {saleType === "PREORDER" && <div className="w-[8px] h-[8px] rounded-full bg-white" />}
+                </div>
+                <span className="font-jakarta text-[12px] text-[#333333]">Preorder</span>
+              </label>
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="rounded-[8px] border border-[#EAEAEA] bg-[#F7FFF8] px-[14px] py-[14px]">
+              <p className="font-jakarta text-[12px] text-[#2E7D32] font-semibold">
+                {saleType === "PREORDER" ? "Preorder" : "In Stock"}
+              </p>
+              <p className="font-jakarta text-[11px] text-[#9B9B9B] mt-[2px]">Set during vendor registration</p>
+            </div>
+          )}
+          {saleType === "PREORDER" && vendorMaxPreorderDays && (
+            <p className="font-jakarta text-[11px] text-[#9B9B9B] mt-[6px]">
+              Max preorder delivery: <span className="font-semibold text-[#333333]">{vendorMaxPreorderDays} days</span>
+            </p>
+          )}
+        </div>
 
-        {/* Image upload — only shown for add */}
-        {mode === "add" && (
-          <div>
+        {/* Image upload */}
+        <div>
             <label className="font-jakarta text-[13px] font-semibold text-[#333333] tracking-[-0.04em] mb-[10px] block">
-              Upload product image <span className="text-[#FDC500]">*</span>
+              {mode === "add" ? "Upload product image" : "Product image"} <span className="text-[#FDC500]">{mode === "add" ? "*" : ""}</span>
             </label>
-            <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
+            <input ref={fileRef} type="file" accept="image/jpeg,image/jpg,image/png" onChange={handleFile} className="hidden" aria-label="Upload product image" title="Upload product image" />
             {imagePreview ? (
-              <div className="relative w-full h-[160px] rounded-[8px] overflow-hidden border border-[#EAEAEA]">
-                <Image src={imagePreview} alt="Product preview" fill className="object-cover" sizes="350px" />
-                <button
-                  type="button"
-                  aria-label="Remove image"
-                  onClick={() => { setImageFile(null); setImagePreview(null); }}
-                  className="absolute top-[8px] right-[8px] w-[28px] h-[28px] rounded-full bg-white/80 flex items-center justify-center"
-                >
-                  <X size={14} className="text-[#E53935]" />
-                </button>
+              <div className="relative w-full h-[180px] rounded-[8px] overflow-hidden border border-[#EAEAEA]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={imagePreview} alt="Product preview" className="w-full h-full object-cover" />
+                <div className="absolute bottom-0 left-0 right-0 flex gap-[8px] p-[8px] bg-black/30">
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    className="flex-1 h-[32px] rounded-[6px] bg-white font-jakarta text-[12px] font-semibold text-[#333333]"
+                  >
+                    Change image
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Remove image"
+                    onClick={() => { setImageFile(null); setImagePreview(null); }}
+                    className="w-[32px] h-[32px] rounded-[6px] bg-[#E53935] flex items-center justify-center"
+                  >
+                    <X size={14} className="text-white" />
+                  </button>
+                </div>
               </div>
             ) : (
-              <div>
-                <button
-                  type="button"
-                  onClick={() => fileRef.current?.click()}
-                  className="font-jakarta text-[13px] font-semibold text-[#2E7D32] underline tracking-[-0.04em]"
-                >
-                  + Click to upload product image
-                </button>
-                <p className="font-jakarta text-[12px] text-[#9B9B9B] leading-[1.5] mt-[6px] tracking-[-0.04em]">
-                  Ensure product is on a contrasting background, e.g if product is dark in color, place on bright background and vice versa.
-                </p>
-              </div>
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                className="w-full h-[120px] rounded-[8px] border-2 border-dashed border-[#EAEAEA] flex flex-col items-center justify-center gap-[6px] hover:border-[#2E7D32] transition-colors"
+              >
+                <span className="font-jakarta text-[13px] font-semibold text-[#2E7D32]">+ Click to upload image</span>
+                <span className="font-jakarta text-[11px] text-[#9B9B9B]">JPEG, JPG or PNG only · Solid background recommended</span>
+              </button>
             )}
-          </div>
-        )}
+        </div>
 
         {/* Submit */}
         <button
@@ -445,7 +502,7 @@ function ProductCard({ product, onEdit, onDelete }: {
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const img = product.imageUrls?.[0];
+  const img = product.imageUrls?.[0] ?? product.images?.[0];
   return (
     <div className="bg-white rounded-[12px] border border-[#EAEAEA] p-[16px] relative">
       {/* Action buttons */}
@@ -491,7 +548,7 @@ function ProductCard({ product, onEdit, onDelete }: {
             </p>
             <p className="font-jakarta text-[12px] text-[#333333] tracking-[-0.04em]">
               <span className="font-semibold">Availability:</span>{" "}
-              <span className="text-[#2E7D32]">{product.isAvailable ? "Available" : "Out of Stock"}</span>
+              <span className="text-[#2E7D32]">{(product.isAvailable ?? product.isActive) ? "Available" : "Out of Stock"}</span>
             </p>
             <p className="font-jakarta text-[12px] text-[#333333] tracking-[-0.04em]">
               <span className="font-semibold">Type:</span>{" "}
@@ -505,11 +562,12 @@ function ProductCard({ product, onEdit, onDelete }: {
         </div>
 
         {/* Image */}
-        {img && (
-          <div className="w-[90px] h-[100px] rounded-[8px] overflow-hidden shrink-0 self-center relative">
-            <Image src={img} alt={product.name} fill className="object-cover" sizes="90px" />
-          </div>
-        )}
+        <div className="w-[90px] h-[100px] rounded-[8px] overflow-hidden shrink-0 self-center relative bg-[#EAEAEA] flex items-center justify-center">
+          {img
+            ? <Image src={img} alt={product.name} fill className="object-cover" sizes="90px" />
+            : <span className="font-jakarta text-[10px] text-[#9B9B9B] text-center px-[4px]">No image</span>
+          }
+        </div>
       </div>
     </div>
   );
@@ -536,13 +594,32 @@ export default function VendorProductsPage() {
     enabled: !isMock,
   });
 
-  const { data: categories } = useQuery<Category[]>({
+  const { data: allCategories } = useQuery<Category[]>({
     queryKey: ["categories"],
     queryFn: async () => {
       const { data } = await apiClient.get("/categories");
       return data?.data ?? data ?? [];
     },
   });
+
+  const { data: vendorProfile } = useQuery({
+    queryKey: ["vendor-profile"],
+    queryFn: async () => {
+      const { data } = await apiClient.get("/vendors/me/profile");
+      return data?.data ?? data;
+    },
+    enabled: !isMock,
+  });
+
+  // Filter to only the categories the vendor selected during signup
+  const vendorCategoryIds: string[] = (
+    vendorProfile?.vendorCategories?.map((vc: { category: { id: string } }) => vc.category.id) ??
+    vendorProfile?.categories?.map((c: { id: string }) => c.id) ??
+    []
+  );
+  const categories = vendorCategoryIds.length > 0
+    ? (allCategories ?? []).filter((c) => vendorCategoryIds.includes(c.id))
+    : (allCategories ?? []);
 
   const deleteMutation = useMutation({
     mutationFn: async (productId: string) => {
@@ -559,14 +636,19 @@ export default function VendorProductsPage() {
   });
 
   const items = isMock ? MOCK_PRODUCTS : (products ?? []);
-  const cats = categories ?? [];
+  const cats = categories;
 
   // ── Add / Edit views ──
+  const vendorSaleType = vendorProfile?.saleType as string | undefined;
+  const vendorMaxPreorderDays = vendorProfile?.maxPreorderDays as number | undefined;
+
   if (view === "add") {
     return (
       <ProductForm
         mode="add"
         categories={cats}
+        vendorSaleType={vendorSaleType}
+        vendorMaxPreorderDays={vendorMaxPreorderDays}
         isMock={isMock}
         onBack={() => setView("list")}
         onSuccess={() => {
@@ -584,6 +666,8 @@ export default function VendorProductsPage() {
         mode="edit"
         product={editingProduct}
         categories={cats}
+        vendorSaleType={vendorSaleType}
+        vendorMaxPreorderDays={vendorMaxPreorderDays}
         isMock={isMock}
         onBack={() => { setView("list"); setEditingProduct(null); }}
         onSuccess={() => {

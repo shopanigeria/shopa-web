@@ -1,13 +1,12 @@
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
 
-// These will be replaced at runtime via the sw registration
 const firebaseConfig = {
-  apiKey: self.FIREBASE_API_KEY,
-  authDomain: self.FIREBASE_AUTH_DOMAIN,
-  projectId: self.FIREBASE_PROJECT_ID,
-  messagingSenderId: self.FIREBASE_MESSAGING_SENDER_ID,
-  appId: self.FIREBASE_APP_ID,
+  apiKey: "AIzaSyDRLWiCkGZjuUlZs2JXN0Ig60CLCG9Wk6I",
+  authDomain: "shopa-prod.firebaseapp.com",
+  projectId: "shopa-prod",
+  messagingSenderId: "293904271846",
+  appId: "1:293904271846:web:e1722a69a54d16d81d2e27",
 };
 
 firebase.initializeApp(firebaseConfig);

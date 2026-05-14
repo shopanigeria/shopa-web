@@ -25,7 +25,23 @@ export default function SuperAdminDashboardPage() {
     queryKey: ["superadmin-analytics"],
     queryFn: async () => {
       const { data } = await apiClient.get("/analytics/admin");
-      return data?.data ?? data ?? {};
+      return data?.stats ?? data?.data ?? data ?? {};
+    },
+  });
+
+  const { data: allVendors } = useQuery<unknown[]>({
+    queryKey: ["superadmin-vendors-approved"],
+    queryFn: async () => {
+      const { data } = await apiClient.get("/vendors");
+      return data?.data ?? data ?? [];
+    },
+  });
+
+  const { data: allStudents } = useQuery<unknown[]>({
+    queryKey: ["superadmin-students"],
+    queryFn: async () => {
+      const { data } = await apiClient.get("/users/students");
+      return data?.data ?? data ?? [];
     },
   });
 
@@ -56,20 +72,29 @@ export default function SuperAdminDashboardPage() {
   const { data: campuses, isLoading: campusesLoading } = useQuery<unknown[]>({
     queryKey: ["superadmin-campuses"],
     queryFn: async () => {
-      const { data } = await apiClient.get("/campuses");
+      const { data } = await apiClient.get("/campuses", { params: { includeInactive: true } });
       return Array.isArray(data) ? data : (data?.data ?? []);
+    },
+  });
+
+  const { data: allOrders } = useQuery<unknown[]>({
+    queryKey: ["superadmin-orders"],
+    queryFn: async () => {
+      const { data } = await apiClient.get("/orders");
+      return data?.data ?? data ?? [];
     },
   });
 
   const statsLoading = analyticsLoading || pvLoading || pwLoading || odLoading || campusesLoading;
 
   const totalUniversities   = campuses?.length                ?? 0;
-  const totalVendors        = analytics?.totalVendors         ?? 0;
-  const totalStudents       = analytics?.totalStudents        ?? 0;
-  const totalOrders         = analytics?.totalOrders          ?? 0;
+  const totalVendors        = analytics?.totalVendors         ?? (allVendors?.length ?? 0);
+  const totalStudents       = analytics?.totalStudents        ?? (allStudents?.length ?? 0);
+  const totalOrders         = analytics?.totalOrders          ?? (allOrders?.length ?? 0);
   const totalRevenue        = analytics?.totalRevenue         ?? 0;
   const platformFees        = analytics?.platformFees         ?? 0;
   const totalWithdrawals    = analytics?.totalWithdrawals     ?? 0;
+  const netRevenue          = analytics?.netRevenue           ?? (totalRevenue - platformFees);
   const pendingVendorCount  = pendingVendors?.length          ?? 0;
   const pendingWithdrawCount = pendingWithdrawals?.length     ?? 0;
   const openDisputeCount    = openDisputes?.length            ?? 0;
@@ -121,7 +146,7 @@ export default function SuperAdminDashboardPage() {
           <StatsCard label="Total Revenue"       value={formatNaira(totalRevenue)}   icon={DollarSign}    iconBg="bg-[#D8FFDA]" iconColor="text-[#2E7D32]" />
           <StatsCard label="Platform Fees (7.5%)" value={formatNaira(platformFees)} icon={DollarSign}    iconBg="bg-[#FFF9C4]" iconColor="text-[#F9A825]" />
           <StatsCard label="Withdrawals Paid"    value={formatNaira(totalWithdrawals)} icon={Wallet}      iconBg="bg-[#FFEBEE]" iconColor="text-[#E53935]" />
-          <StatsCard label="Net Revenue"         value={formatNaira(platformFees - totalWithdrawals)} icon={DollarSign} iconBg="bg-[#E8F5E9]" iconColor="text-[#1B5E20]" />
+          <StatsCard label="Net Revenue"         value={formatNaira(netRevenue)} icon={DollarSign} iconBg="bg-[#E8F5E9]" iconColor="text-[#1B5E20]" />
         </div>
       )}
 

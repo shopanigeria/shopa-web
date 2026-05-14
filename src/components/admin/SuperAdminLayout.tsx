@@ -7,6 +7,7 @@ import {
   ShoppingBag, MessageSquare, Wallet, LogOut, ChevronRight,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/auth.store";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { cn } from "@/lib/utils";
 
 const NAV_SECTIONS = [
@@ -40,6 +41,7 @@ export function SuperAdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuthStore();
+  usePushNotifications();
 
   function handleLogout() {
     logout();

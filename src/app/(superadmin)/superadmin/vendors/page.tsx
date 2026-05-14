@@ -17,7 +17,8 @@ interface Vendor {
   createdAt: string;
   campus?: { name: string };
   user?: { firstName: string; lastName: string; email: string };
-  categories?: string[];
+  categories?: { id: string; name: string }[];
+  itemsSold?: string[];
 }
 
 
@@ -37,8 +38,12 @@ export default function SuperAdminVendorsPage() {
   const { data: pendingVendors, isLoading: pendingLoading } = useQuery<Vendor[]>({
     queryKey: ["superadmin-vendors-pending"],
     queryFn: async () => {
-      const { data } = await apiClient.get("/vendors/admin/pending");
-      return data?.data ?? data ?? [];
+      try {
+        const { data } = await apiClient.get("/vendors/admin/pending");
+        return data?.data ?? data ?? [];
+      } catch {
+        return [];
+      }
     },
   });
 
@@ -87,10 +92,20 @@ export default function SuperAdminVendorsPage() {
         columns={[
           { key: "storeName", label: "Store", render: (r) => {
             const v = r as unknown as Vendor;
-            return <div><p className="font-jakarta font-semibold text-[13px] text-[#151515]">{v.storeName}</p><p className="font-jakarta text-[11px] text-[#9B9B9B]">{v.user?.firstName} {v.user?.lastName}</p></div>;
+            return (
+              <div>
+                <p className="font-jakarta font-semibold text-[13px] text-[#151515]">{v.storeName}</p>
+                <p className="font-jakarta text-[11px] text-[#9B9B9B]">{v.user?.firstName} {v.user?.lastName}</p>
+                {v.user?.email && <p className="font-jakarta text-[11px] text-[#9B9B9B]">{v.user.email}</p>}
+              </div>
+            );
           }},
           { key: "campus", label: "Campus", render: (r) => <span className="font-jakarta text-[13px] text-[#333333]">{(r as unknown as Vendor).campus?.name ?? "—"}</span> },
-          { key: "categories", label: "Categories", render: (r) => <span className="font-jakarta text-[12px] text-[#545454]">{((r as unknown as Vendor).categories ?? []).join(", ") || "—"}</span> },
+          { key: "categories", label: "Categories", render: (r) => {
+            const v = r as unknown as Vendor;
+            const cats = v.categories?.map((c) => c.name).join(", ") || v.itemsSold?.join(", ") || "—";
+            return <span className="font-jakarta text-[12px] text-[#545454]">{cats}</span>;
+          }},
           { key: "status", label: "Status", render: (r) => <StatusBadge status={(r as unknown as Vendor).status} /> },
           { key: "createdAt", label: "Registered", render: (r) => <span className="font-jakarta text-[12px] text-[#9B9B9B]">{new Date((r as unknown as Vendor).createdAt).toLocaleDateString("en-NG", { day: "2-digit", month: "short", year: "numeric" })}</span> },
           { key: "actions", label: "Actions", render: (r) => {

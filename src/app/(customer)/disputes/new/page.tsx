@@ -7,11 +7,12 @@ import ScreenHeader from "@/components/layout/ScreenHeader";
 import BackButton from "@/components/layout/BackButton";
 import { useOrders } from "@/hooks/useOrders";
 import { useCreateDispute } from "@/hooks/useOrders";
+import { apiClient } from "@/lib/api/client";
 import { ROUTES } from "@/lib/constants";
 import { toast } from "sonner";
 import type { Order } from "@/types";
 
-const DISPUTABLE_STATUSES = ["PAID", "CONFIRMED", "SHIPPED", "DELIVERED"];
+const DISPUTABLE_STATUSES = ["DELIVERED", "COMPLETED"];
 
 const orderLabel = (order: Order) => {
   const short = (order.orderNumber ?? order.id).slice(-8).toUpperCase();
@@ -30,14 +31,13 @@ export default function RaiseDisputePage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [complaint, setComplaint] = useState("");
   const [accountDetails, setAccountDetails] = useState("");
-  const [uploadedFiles, setUploadedFiles] = useState<{ name: string }[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<{ name: string; file: File }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
-    const newFiles = files.map((f) => ({ name: f.name }));
+    const newFiles = files.map((f) => ({ name: f.name, file: f }));
     setUploadedFiles((prev) => [...prev, ...newFiles]);
-    // Reset input so same file can be re-added
     e.target.value = "";
   };
 
@@ -56,15 +56,35 @@ export default function RaiseDisputePage() {
     if (!selectedOrder) return;
 
     try {
+      // Upload proof files first
+      let proofUrls: string[] = [];
+      if (uploadedFiles.length > 0) {
+        try {
+          const uploads = await Promise.all(
+            uploadedFiles.map(async (f) => {
+              const fd = new FormData();
+              fd.append("file", f.file);
+              const { data } = await apiClient.post("/upload/image", fd, {
+                headers: { "Content-Type": "multipart/form-data" },
+              });
+              return data?.url ?? data?.data?.url ?? null;
+            })
+          );
+          proofUrls = uploads.filter(Boolean) as string[];
+        } catch {
+          // Continue without proof if upload fails
+        }
+      }
+
       await createDispute.mutateAsync({
         orderId: selectedOrder.id,
         reason: complaint.trim(),
         description: complaint.trim(),
         accountDetails: accountDetails.trim() || undefined,
-        proofUrls: [],
+        proofUrls,
       });
 
-      toast.success("Dispute raised! You will get a response in your mail within 72 hours.");
+      toast.success("Dispute raised! You will get a response in your mail within 48 hours.");
       router.replace(ROUTES.PROFILE);
     } catch (err: unknown) {
       const msg =
@@ -94,7 +114,7 @@ export default function RaiseDisputePage() {
           ) : orders.length === 0 ? (
             <div className="border border-[#EAEAEA] rounded-[8px] px-[16px] py-[16px] bg-white">
               <p className="font-jakarta text-[13px] text-[#9B9B9B] leading-[1.5] tracking-[-0.04em]">
-                No eligible orders found. Disputes can only be raised for paid, confirmed, shipped, or delivered orders.
+                No completed orders found. Disputes can only be raised for delivered orders.
               </p>
             </div>
           ) : (

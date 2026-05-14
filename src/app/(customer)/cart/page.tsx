@@ -149,7 +149,7 @@ export default function CartPage() {
           </div>
 
           {/* Mobile sticky footer */}
-          <div className="md:hidden fixed bottom-[88px] left-1/2 -translate-x-1/2 w-full max-w-[390px] px-[24px] bg-transparent z-20">
+          <div className="md:hidden fixed bottom-[72px] left-0 right-0 w-full px-[16px] sm:px-[24px] bg-transparent z-20">
             <div className="flex flex-row items-center gap-[16px]">
               <div className="w-[40%]">
                 <p className="font-jakarta text-[12px] text-[#9B9B9B] tracking-[-0.04em]">Sub Total:</p>

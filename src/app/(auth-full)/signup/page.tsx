@@ -11,7 +11,7 @@ import { apiClient } from "@/lib/api";
 import SuccessModal from "@/components/shared/SuccessModal";
 import { toast } from "sonner";
 
-const FALLBACK_CAMPUSES: { id: string; name: string }[] = [{ id: "", name: "Crawford University" }];
+const FALLBACK_CAMPUSES: { id: string; name: string }[] = [];
 
 interface Campus {
   id: string;
@@ -31,23 +31,14 @@ export default function SignupPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-
-    apiClient.get<Campus[]>("/campuses", { signal: controller.signal }).then((res) => {
-      if (res.data && res.data.length > 0) {
-        setCampuses(res.data);
-      } else {
-        setCampuses(FALLBACK_CAMPUSES);
-      }
-    }).catch(() => {
-      setCampuses(FALLBACK_CAMPUSES);
-    }).finally(() => {
-      clearTimeout(timeout);
-      setCampusesLoading(false);
-    });
-
-    return () => { controller.abort(); clearTimeout(timeout); };
+    fetch("/api/campuses")
+      .then((r) => r.json())
+      .then((raw) => {
+        const data: Campus[] = Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
+        setCampuses(data.length ? data : FALLBACK_CAMPUSES);
+      })
+      .catch(() => setCampuses(FALLBACK_CAMPUSES))
+      .finally(() => setCampusesLoading(false));
   }, []);
 
   const {

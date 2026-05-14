@@ -12,10 +12,13 @@ interface Order {
   id: string;
   orderNumber?: string;
   status: string;
-  totalAmount: string;
+  totalAmount?: string | number;
+  total?: string | number;
   createdAt: string;
+  buyer?: { firstName: string; lastName: string };
   user?: { firstName: string; lastName: string };
-  vendor?: { storeName: string; campus?: { name: string } };
+  vendor?: { storeName: string };
+  campus?: { name: string };
 }
 
 
@@ -51,10 +54,10 @@ export default function SuperAdminOrdersPage() {
         onRowClick={(row) => router.push(`/superadmin/orders/${(row as unknown as Order).id}`)}
         columns={[
           { key: "orderNumber", label: "Order #", render: (r) => <span className="font-jakarta font-semibold text-[13px] text-[#151515]">#{((r as unknown as Order).orderNumber ?? (r as unknown as Order).id).slice(-8).toUpperCase()}</span> },
-          { key: "buyer", label: "Buyer", render: (r) => { const o = r as unknown as Order; return <span className="font-jakarta text-[13px] text-[#333333]">{o.user ? `${o.user.firstName} ${o.user.lastName}` : "—"}</span>; } },
+          { key: "buyer", label: "Buyer", render: (r) => { const o = r as unknown as Order; const p = o.buyer ?? o.user; return <span className="font-jakarta text-[13px] text-[#333333]">{p ? `${p.firstName} ${p.lastName}` : "—"}</span>; } },
           { key: "vendor", label: "Vendor", render: (r) => <span className="font-jakarta text-[13px] text-[#333333]">{(r as unknown as Order).vendor?.storeName ?? "—"}</span> },
-          { key: "campus", label: "Campus", render: (r) => <span className="font-jakarta text-[12px] text-[#9B9B9B]">{(r as unknown as Order).vendor?.campus?.name ?? "—"}</span> },
-          { key: "totalAmount", label: "Amount", render: (r) => <span className="font-jakarta font-semibold text-[13px] text-[#2E7D32]">{formatNaira(parseFloat((r as unknown as Order).totalAmount))}</span> },
+          { key: "campus", label: "Campus", render: (r) => { const o = r as unknown as Order; return <span className="font-jakarta text-[12px] text-[#9B9B9B]">{o.campus?.name ?? "—"}</span>; } },
+          { key: "totalAmount", label: "Amount", render: (r) => { const o = r as unknown as Order; const raw = o.totalAmount ?? o.total ?? 0; const n = parseFloat(String(raw).replace(/[^0-9.]/g, "")); return <span className="font-jakarta font-semibold text-[13px] text-[#2E7D32]">{formatNaira(isNaN(n) ? 0 : n)}</span>; } },
           { key: "status", label: "Status", render: (r) => <StatusBadge status={(r as unknown as Order).status} /> },
           { key: "createdAt", label: "Date", render: (r) => <span className="font-jakarta text-[12px] text-[#9B9B9B]">{new Date((r as unknown as Order).createdAt).toLocaleDateString("en-NG", { day: "2-digit", month: "short", year: "numeric" })}</span> },
         ]}

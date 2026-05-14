@@ -34,8 +34,11 @@ interface DisputeDetail {
     totalAmount?: string;
     orderItems?: { quantity: number; product: { name: string } }[];
     user?: { firstName: string; lastName: string; email?: string };
+    buyer?: { firstName: string; lastName: string; email?: string };
     vendor?: { storeName: string; user?: { firstName: string; lastName: string } };
   };
+  raisedBy?: { firstName: string; lastName: string; email?: string };
+  buyer?: { firstName: string; lastName: string; email?: string };
 }
 
 // ── Dispute flow states visible to university admin ───────────────────────────
@@ -250,7 +253,7 @@ export default function DisputeDetailPage() {
   const statusInfo = statusLabel[d.status] ?? { label: d.status, info: "" };
 
   return (
-    <AdminLayout campusName="Crawford University">
+    <AdminLayout >
       <button type="button" onClick={() => router.back()} className="flex items-center gap-[6px] text-[#2E7D32] mb-[20px] hover:opacity-70 transition-opacity">
         <ChevronLeft size={18} /> <span className="font-jakarta text-[13px] font-semibold">Back to Disputes</span>
       </button>
@@ -297,8 +300,8 @@ export default function DisputeDetailPage() {
           {/* Order info */}
           <div className="bg-white rounded-[12px] border border-[#EAEAEA] p-[20px]">
             <p className="font-satoshi font-bold text-[14px] text-[#151515] mb-[4px]">Order Information</p>
-            <Row label="Buyer" value={d.order?.user ? `${d.order.user.firstName} ${d.order.user.lastName}` : "—"} />
-            <Row label="Buyer Email" value={d.order?.user?.email ?? "—"} />
+            <Row label="Buyer" value={(() => { const b = d.raisedBy ?? d.order?.buyer ?? d.order?.user ?? d.buyer; return b ? `${b.firstName} ${b.lastName}` : "—"; })()} />
+            <Row label="Buyer Email" value={(() => { const b = d.raisedBy ?? d.order?.buyer ?? d.order?.user ?? d.buyer; return b?.email ?? "—"; })()} />
             <Row label="Vendor" value={d.order?.vendor?.storeName ?? "—"} />
             <Row label="Vendor Owner" value={d.order?.vendor?.user ? `${d.order.vendor.user.firstName} ${d.order.vendor.user.lastName}` : "—"} />
             {d.order?.orderItems?.map((item, i) => (

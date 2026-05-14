@@ -4,6 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:customer": "NEXT_PUBLIC_APP_ROLE=customer next dev -p 3000",
+    "dev:vendor": "NEXT_PUBLIC_APP_ROLE=vendor next dev -p 3001",
+    "dev:admin": "NEXT_PUBLIC_APP_ROLE=admin next dev -p 3002",
+    "dev:superadmin": "NEXT_PUBLIC_APP_ROLE=superadmin next dev -p 3003",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

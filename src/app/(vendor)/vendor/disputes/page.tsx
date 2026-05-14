@@ -23,15 +23,22 @@ interface Dispute {
   orderId: string;
   status: string;
   reason: string;
+  description?: string;
+  accountDetails?: string;
   proofUrls?: string[];
   vendorResponse?: string;
+  response?: string;
   createdAt: string;
   order?: {
     id: string;
     orderNumber?: string;
-    orderItems: OrderItem[];
+    totalAmount?: string;
+    orderItems?: OrderItem[];
+    buyer?: { firstName: string; lastName: string };
   };
+  raisedBy?: { firstName: string; lastName: string };
   user?: { firstName: string; lastName: string };
+  buyer?: { firstName: string; lastName: string };
 }
 
 type Tab = "INCOMING" | "ONGOING" | "RESOLVED";
@@ -88,8 +95,8 @@ const MOCK_DISPUTES: Dispute[] = [
 
 const STATUS_MAP: Record<Tab, string[]> = {
   INCOMING: ["OPEN", "PENDING"],
-  ONGOING: ["RESPONDED", "UNDER_REVIEW", "IN_PROGRESS"],
-  RESOLVED: ["RESOLVED", "CLOSED"],
+  ONGOING: ["RESPONDED", "VENDOR_RESPONDED", "UNDER_REVIEW", "IN_PROGRESS", "AWAITING_ADMIN"],
+  RESOLVED: ["RESOLVED", "CLOSED", "ADMIN_RESOLVED"],
 };
 
 const TABS: { key: Tab; label: string; activeClass: string }[] = [
@@ -105,8 +112,34 @@ function getShort(dispute: Dispute) {
 }
 
 function getImg(dispute: Dispute) {
-  const item = dispute.order?.orderItems[0];
+  const item = dispute.order?.orderItems?.[0];
   return item?.product?.imageUrls?.[0] ?? item?.product?.images?.[0];
+}
+
+function getCustomerName(dispute: Dispute) {
+  const c = dispute.raisedBy ?? dispute.user ?? dispute.buyer ?? dispute.order?.buyer;
+  return c ? `${c.firstName} ${c.lastName}` : "—";
+}
+
+function getVendorResponse(dispute: Dispute) {
+  return dispute.vendorResponse ?? dispute.response;
+}
+
+function ProofDisplay({ proofUrls }: { proofUrls?: string[] }) {
+  if (!proofUrls?.length) return null;
+  return (
+    <div>
+      <p className="font-jakarta text-[13px] font-bold text-[#333333] tracking-[-0.04em] mb-[8px]">Customer Evidence:</p>
+      <div className="flex flex-wrap gap-[8px]">
+        {proofUrls.map((url, i) => (
+          <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={url} alt={`Proof ${i + 1}`} className="w-[80px] h-[80px] rounded-[8px] object-cover border border-[#EAEAEA] hover:opacity-80 transition-opacity" />
+          </a>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 // ── Backdrop ───────────────────────────────────────────────────────────────
@@ -122,7 +155,7 @@ function SuccessModal({ onClose }: { onClose: () => void }) {
     <>
       <Backdrop onClose={onClose} />
       <div className="fixed inset-0 z-50 flex items-center justify-center px-[24px]">
-        <div className="bg-white rounded-[16px] border border-[#2E7D32] px-[32px] pt-[32px] pb-[32px] w-full max-w-[360px] relative flex flex-col items-center">
+        <div className="bg-white rounded-[16px] border border-[#2E7D32] px-[16px] sm:px-[32px] pt-[32px] pb-[32px] w-full max-w-[360px] relative flex flex-col items-center">
           <button type="button" aria-label="Close" onClick={onClose} className="absolute top-[16px] right-[16px]">
             <div className="w-[28px] h-[28px] rounded-full border-2 border-[#2E7D32] flex items-center justify-center">
               <X size={14} className="text-[#2E7D32]" />
@@ -132,7 +165,7 @@ function SuccessModal({ onClose }: { onClose: () => void }) {
             <Check size={36} className="text-white" strokeWidth={3} />
           </div>
           <p className="font-jakarta text-[14px] font-semibold text-[#2E7D32] text-center leading-[1.6] tracking-[-0.04em]">
-            Response submitted! You will get a response in your mail within 72 hours. Thank you!
+            Response submitted! The dispute is now under review by the campus admin. You will be notified of the outcome.
           </p>
         </div>
       </div>
@@ -144,7 +177,7 @@ function SuccessModal({ onClose }: { onClose: () => void }) {
 
 function ResolvedDetailModal({ dispute, onClose }: { dispute: Dispute; onClose: () => void }) {
   const img = getImg(dispute);
-  const item = dispute.order?.orderItems[0];
+  const item = dispute.order?.orderItems?.[0];
 
   return (
     <>
@@ -162,7 +195,7 @@ function ResolvedDetailModal({ dispute, onClose }: { dispute: Dispute; onClose: 
           <div className="flex flex-col gap-[10px]">
             <p className="font-jakarta text-[13px] text-[#333333] tracking-[-0.04em]">
               <span className="font-bold">Customer Name:</span>{" "}
-              <span className="text-[#9B9B9B]">{dispute.user ? `${dispute.user.firstName} ${dispute.user.lastName}` : "—"}</span>
+              <span className="text-[#9B9B9B]">{getCustomerName(dispute)}</span>
             </p>
             {item && (
               <div>
@@ -181,19 +214,13 @@ function ResolvedDetailModal({ dispute, onClose }: { dispute: Dispute; onClose: 
               <span className="font-bold">Customer Complaint:</span>{" "}
               <span className="text-[#9B9B9B]">{dispute.reason}</span>
             </p>
-            {dispute.vendorResponse && (
+            {getVendorResponse(dispute) && (
               <p className="font-jakarta text-[13px] text-[#333333] tracking-[-0.04em]">
                 <span className="font-bold">Your Response:</span>{" "}
-                <span className="text-[#9B9B9B]">{dispute.vendorResponse}</span>
+                <span className="text-[#9B9B9B]">{getVendorResponse(dispute)}</span>
               </p>
             )}
-            {dispute.proofUrls && dispute.proofUrls.length > 0 && (
-              <a href={dispute.proofUrls[0]} target="_blank" rel="noopener noreferrer"
-                className="font-jakarta text-[13px] tracking-[-0.04em]">
-                <span className="text-[#2E7D32] font-bold underline">Click here</span>
-                <span className="text-[#333333]"> to view proof</span>
-              </a>
-            )}
+            <ProofDisplay proofUrls={dispute.proofUrls} />
           </div>
         </div>
       </div>
@@ -205,7 +232,7 @@ function ResolvedDetailModal({ dispute, onClose }: { dispute: Dispute; onClose: 
 
 function IncomingDisputeCard({ dispute, onRespond }: { dispute: Dispute; onRespond: () => void }) {
   const img = getImg(dispute);
-  const item = dispute.order?.orderItems[0];
+  const item = dispute.order?.orderItems?.[0];
   return (
     <div className="bg-white rounded-[12px] border border-[#EAEAEA] p-[16px]">
       <p className="font-jakarta font-bold text-[14px] text-[#151515] tracking-[-0.04em] mb-[12px]">
@@ -214,7 +241,7 @@ function IncomingDisputeCard({ dispute, onRespond }: { dispute: Dispute; onRespo
       <div className="flex flex-col gap-[8px] mb-[14px]">
         <p className="font-jakarta text-[13px] text-[#333333] tracking-[-0.04em]">
           <span className="font-bold">Customer Name:</span>{" "}
-          <span className="text-[#9B9B9B]">{dispute.user ? `${dispute.user.firstName} ${dispute.user.lastName}` : "—"}</span>
+          <span className="text-[#9B9B9B]">{getCustomerName(dispute)}</span>
         </p>
         {item && (
           <div>
@@ -233,13 +260,7 @@ function IncomingDisputeCard({ dispute, onRespond }: { dispute: Dispute; onRespo
           <span className="font-bold">Customer Complaint:</span>{" "}
           <span className="text-[#9B9B9B]">{dispute.reason}</span>
         </p>
-        {dispute.proofUrls && dispute.proofUrls.length > 0 && (
-          <a href={dispute.proofUrls[0]} target="_blank" rel="noopener noreferrer"
-            className="font-jakarta text-[13px] tracking-[-0.04em]">
-            <span className="text-[#2E7D32] font-bold underline">Click here</span>
-            <span className="text-[#333333]"> to view proof</span>
-          </a>
-        )}
+        <ProofDisplay proofUrls={dispute.proofUrls} />
       </div>
       <button type="button" onClick={onRespond}
         className="w-full h-[44px] rounded-[8px] bg-[#2E7D32] font-jakarta text-[13px] font-semibold text-white hover:bg-[#1D5620] transition-colors">
@@ -251,7 +272,7 @@ function IncomingDisputeCard({ dispute, onRespond }: { dispute: Dispute; onRespo
 
 function OngoingDisputeCard({ dispute }: { dispute: Dispute }) {
   const img = getImg(dispute);
-  const item = dispute.order?.orderItems[0];
+  const item = dispute.order?.orderItems?.[0];
   return (
     <div className="bg-white rounded-[12px] border border-[#EAEAEA] p-[16px]">
       <p className="font-jakarta font-bold text-[14px] text-[#151515] tracking-[-0.04em] mb-[12px]">
@@ -260,7 +281,7 @@ function OngoingDisputeCard({ dispute }: { dispute: Dispute }) {
       <div className="flex flex-col gap-[8px]">
         <p className="font-jakarta text-[13px] text-[#333333] tracking-[-0.04em]">
           <span className="font-bold">Customer Name:</span>{" "}
-          <span className="text-[#9B9B9B]">{dispute.user ? `${dispute.user.firstName} ${dispute.user.lastName}` : "—"}</span>
+          <span className="text-[#9B9B9B]">{getCustomerName(dispute)}</span>
         </p>
         {item && (
           <div>
@@ -279,19 +300,13 @@ function OngoingDisputeCard({ dispute }: { dispute: Dispute }) {
           <span className="font-bold">Customer Complaint:</span>{" "}
           <span className="text-[#9B9B9B]">{dispute.reason}</span>
         </p>
-        {dispute.vendorResponse && (
+        {getVendorResponse(dispute) && (
           <p className="font-jakarta text-[13px] text-[#333333] tracking-[-0.04em]">
             <span className="font-bold">Your Response:</span>{" "}
-            <span className="text-[#9B9B9B]">{dispute.vendorResponse}</span>
+            <span className="text-[#9B9B9B]">{getVendorResponse(dispute)}</span>
           </p>
         )}
-        {dispute.proofUrls && dispute.proofUrls.length > 0 && (
-          <a href={dispute.proofUrls[0]} target="_blank" rel="noopener noreferrer"
-            className="font-jakarta text-[13px] tracking-[-0.04em]">
-            <span className="text-[#2E7D32] font-bold underline">Click here</span>
-            <span className="text-[#333333]"> to view proof</span>
-          </a>
-        )}
+        <ProofDisplay proofUrls={dispute.proofUrls} />
       </div>
     </div>
   );
@@ -344,16 +359,21 @@ function ResponseForm({ dispute, isMock, onBack, onSuccess }: {
     try {
       let uploadedUrls: string[] = [];
       if (files.length > 0) {
-        const fd = new FormData();
-        files.forEach((f) => fd.append("images", f));
-        const { data } = await apiClient.post("/upload/images", fd, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
-        uploadedUrls = data?.urls ?? data?.data?.urls ?? [];
+        const uploads = await Promise.all(
+          files.map(async (f) => {
+            const fd = new FormData();
+            fd.append("file", f);
+            const { data } = await apiClient.post("/upload/image", fd, {
+              headers: { "Content-Type": "multipart/form-data" },
+            });
+            return data?.url ?? data?.data?.url ?? null;
+          })
+        );
+        uploadedUrls = uploads.filter(Boolean) as string[];
       }
       await apiClient.post(`/disputes/${dispute.id}/respond`, {
         response: explanation.trim(),
-        ...(uploadedUrls.length > 0 && { counterProofUrls: uploadedUrls }),
+        ...(uploadedUrls.length > 0 && { vendorProofUrls: uploadedUrls }),
       });
       onSuccess();
     } catch {
@@ -418,7 +438,7 @@ function ResponseForm({ dispute, isMock, onBack, onSuccess }: {
       </div>
 
       {/* Submit button — fixed to bottom */}
-      <div className="fixed bottom-[80px] left-1/2 -translate-x-1/2 w-full max-w-[390px] px-[20px]">
+      <div className="fixed bottom-[80px] left-0 right-0 w-full px-[16px] sm:px-[20px]">
         <button
           type="button"
           onClick={handleSubmit}

@@ -14,11 +14,14 @@ import { formatNaira } from "@/lib/utils";
 
 interface Withdrawal {
   id: string;
-  amount: number;
+  amount: string | number;
   status: string;
   createdAt: string;
+  bankName?: string;
+  accountNumber?: string;
+  accountName?: string;
   bankDetails?: { accountNumber: string; bankName: string; accountName: string };
-  vendor?: { storeName: string; campus?: { name: string }; user?: { firstName: string; lastName: string } };
+  vendor?: { storeName: string; campus?: { name: string }; user?: { firstName: string; lastName: string; email?: string; campus?: { name: string } } };
 }
 
 
@@ -46,8 +49,9 @@ export default function WithdrawalsPage() {
   const all = withdrawals ?? [];
   const pending = all.filter((w) => w.status === "PENDING");
   const approvedThisMonth = all.filter((w) => w.status === "APPROVED" && new Date(w.createdAt).getMonth() === new Date().getMonth());
-  const totalPending = pending.reduce((s, w) => s + w.amount, 0);
-  const totalApproved = approvedThisMonth.reduce((s, w) => s + w.amount, 0);
+  const toNum = (w: Withdrawal) => parseFloat(String(w.amount)) || 0;
+  const totalPending = pending.reduce((s, w) => s + toNum(w), 0);
+  const totalApproved = approvedThisMonth.reduce((s, w) => s + toNum(w), 0);
 
   return (
     <SuperAdminLayout>
@@ -75,14 +79,17 @@ export default function WithdrawalsPage() {
             const w = r as unknown as Withdrawal;
             return <div><p className="font-jakarta font-semibold text-[13px] text-[#151515]">{w.vendor?.storeName ?? "—"}</p><p className="font-jakarta text-[11px] text-[#9B9B9B]">{w.vendor?.user ? `${w.vendor.user.firstName} ${w.vendor.user.lastName}` : ""}</p></div>;
           }},
-          { key: "campus", label: "Campus", render: (r) => <span className="font-jakarta text-[12px] text-[#9B9B9B]">{(r as unknown as Withdrawal).vendor?.campus?.name ?? "—"}</span> },
-          { key: "amount", label: "Amount", render: (r) => <span className="font-jakarta font-bold text-[13px] text-[#151515]">{formatNaira((r as unknown as Withdrawal).amount)}</span> },
+          { key: "campus", label: "Campus", render: (r) => { const w = r as unknown as Withdrawal; return <span className="font-jakarta text-[12px] text-[#9B9B9B]">{w.vendor?.campus?.name ?? w.vendor?.user?.campus?.name ?? "—"}</span>; } },
+          { key: "amount", label: "Amount", render: (r) => <span className="font-jakarta font-bold text-[13px] text-[#151515]">{formatNaira(toNum(r as unknown as Withdrawal))}</span> },
           { key: "bankDetails", label: "Bank Details", render: (r) => {
             const w = r as unknown as Withdrawal;
-            return w.bankDetails ? (
+            const bank = w.bankDetails?.bankName ?? w.bankName;
+            const acctNum = w.bankDetails?.accountNumber ?? w.accountNumber;
+            const acctName = w.bankDetails?.accountName ?? w.accountName;
+            return bank ? (
               <div>
-                <p className="font-jakarta text-[12px] text-[#333333]">{w.bankDetails.bankName}</p>
-                <p className="font-jakarta text-[11px] text-[#9B9B9B]">{w.bankDetails.accountNumber} · {w.bankDetails.accountName}</p>
+                <p className="font-jakarta text-[12px] text-[#333333]">{bank}</p>
+                <p className="font-jakarta text-[11px] text-[#9B9B9B]">{acctNum} · {acctName}</p>
               </div>
             ) : <span className="font-jakarta text-[12px] text-[#9B9B9B]">—</span>;
           }},
@@ -104,8 +111,8 @@ export default function WithdrawalsPage() {
       />
 
       {actionModal?.action === "approve" && (
-        <ConfirmModal title={`Approve withdrawal of ${formatNaira(actionModal.w.amount)}?`}
-          message={`To ${actionModal.w.bankDetails?.accountName ?? ""} via ${actionModal.w.bankDetails?.bankName ?? ""} (${actionModal.w.bankDetails?.accountNumber ?? ""})`}
+        <ConfirmModal title={`Approve withdrawal of ${formatNaira(toNum(actionModal.w))}?`}
+          message={`To ${actionModal.w.bankDetails?.accountName ?? actionModal.w.accountName ?? ""} via ${actionModal.w.bankDetails?.bankName ?? actionModal.w.bankName ?? ""} (${actionModal.w.bankDetails?.accountNumber ?? actionModal.w.accountNumber ?? ""})`}
           confirmLabel="Approve & Process" isLoading={processMutation.isPending}
           onClose={() => setActionModal(null)}
           onConfirm={() => processMutation.mutate({ id: actionModal.w.id, status: "APPROVED" })}

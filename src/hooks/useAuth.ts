@@ -6,7 +6,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/stores/auth.store";
 import { authService } from "@/lib/api";
 import { tokenStorage } from "@/lib/api";
+import { apiClient } from "@/lib/api";
 import { QUERY_KEYS, ROUTES } from "@/lib/constants";
+import { requestNotificationPermission } from "@/lib/firebase";
 
 // Maps NEXT_PUBLIC_APP_ROLE → expected JWT role value from the backend
 const PORTAL_ROLE_MAP: Record<string, string> = {
@@ -22,13 +24,13 @@ export function useAuth() {
   const { user, isAuthenticated, isLoading, setUser, setLoading, logout: logoutStore } = useAuthStore();
   const [portalError, setPortalError] = useState<string | null>(null);
 
-  // Fetch current user on mount if token exists
+  // Always re-fetch user profile on mount when token exists to pick up backend changes
   const { data: fetchedUser, isLoading: isFetching } = useQuery({
     queryKey: QUERY_KEYS.USER,
     queryFn: authService.getMe,
-    enabled: !!tokenStorage.getAccess() && !isAuthenticated,
+    enabled: !!tokenStorage.getAccess(),
     retry: false,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 2 * 60 * 1000,
   });
 
   useEffect(() => {
@@ -57,6 +59,13 @@ export function useAuth() {
       setPortalError(null);
       setUser(data.user);
       queryClient.setQueryData(QUERY_KEYS.USER, data.user);
+
+      // Register FCM token after successful login
+      requestNotificationPermission().then((fcmToken) => {
+        if (fcmToken) {
+          apiClient.post("/notifications/fcm-token", { token: fcmToken }).catch(() => {});
+        }
+      }).catch(() => {});
 
       // Route map: JWT role → same-domain path
       const sameDomainRoutes: Record<string, string> = {

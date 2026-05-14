@@ -17,17 +17,22 @@ interface VendorDetail {
   storeName: string;
   description?: string;
   status: string;
-  logoUrl?: string;
-  createdAt: string;
-  user?: { firstName: string; lastName: string; email: string; phone?: string; matricNumber?: string; studentIdUrl?: string };
-  categories?: string[];
+  logo?: string;
+  phone?: string;
+  itemsSold?: string[];
   saleType?: string;
+  createdAt: string;
+  bankAccount?: { accountNumber: string; bankName: string; accountName: string };
+  user?: { firstName: string; lastName: string; email: string; phone?: string; matricNumber?: string; studentIdUrl?: string };
+  categories?: { id: string; name: string }[];
+  products?: Product[];
 }
-interface Product { id: string; name: string; price: number; stock: number; isAvailable: boolean; }
+interface Product { id: string; name: string; price: number; stock: number; isAvailable?: boolean; saleType?: string; images?: string[]; imageUrls?: string[]; }
 
 const MOCK_VENDOR: VendorDetail = {
   id: "v1", storeName: "Fresh Provisions", description: "Quality food items for students.", status: "PENDING",
   createdAt: new Date().toISOString(),
+  phone: "08012345678",
   user: {
     firstName: "Tolu", lastName: "Adeyemi", email: "tolu@crawford.edu",
     phone: "08012345678", matricNumber: "CSC/2021/001",
@@ -53,6 +58,7 @@ export default function VendorDetailPage() {
   const { data: products } = useQuery<Product[]>({
     queryKey: ["admin-vendor-products", id],
     queryFn: async () => { const { data } = await apiClient.get(`/products?vendorId=${id}`); return data?.data ?? data ?? []; },
+    enabled: !!vendor,
   });
 
   const verifyMutation = useMutation({
@@ -70,10 +76,10 @@ export default function VendorDetailPage() {
   });
 
   const v = vendor ?? MOCK_VENDOR;
-  const prods = products ?? MOCK_PRODUCTS;
+  const prods = products ?? vendor?.products ?? MOCK_PRODUCTS;
 
   return (
-    <AdminLayout campusName="Crawford University">
+    <AdminLayout >
       <button type="button" onClick={() => router.back()} className="flex items-center gap-[6px] text-[#2E7D32] mb-[20px] hover:opacity-70 transition-opacity">
         <ChevronLeft size={18} /> <span className="font-jakarta text-[13px] font-semibold">Back to Vendors</span>
       </button>
@@ -83,7 +89,7 @@ export default function VendorDetailPage() {
         <div className="lg:col-span-1 bg-white rounded-[12px] border border-[#EAEAEA] p-[24px]">
           <div className="flex flex-col items-center text-center mb-[20px]">
             <div className="w-[72px] h-[72px] rounded-full bg-[#D8FFDA] flex items-center justify-center mb-[12px] overflow-hidden relative">
-              {v.logoUrl ? <Image src={v.logoUrl} alt="logo" fill className="object-cover" sizes="72px" /> :
+              {(v.logo ?? v.logoUrl) ? <Image src={v.logo ?? v.logoUrl!} alt="logo" fill className="object-cover" sizes="72px" /> :
                 <span className="font-satoshi font-bold text-[24px] text-[#2E7D32]">{v.storeName[0]}</span>}
             </div>
             <p className="font-satoshi font-bold text-[16px] text-[#151515]">{v.storeName}</p>
@@ -92,11 +98,11 @@ export default function VendorDetailPage() {
 
           <div className="flex flex-col gap-[12px] text-left">
             {[
-              { label: "Owner", value: `${v.user?.firstName} ${v.user?.lastName}` },
+              { label: "Owner", value: `${v.user?.firstName ?? ""} ${v.user?.lastName ?? ""}`.trim() || "—" },
               { label: "Email", value: v.user?.email ?? "—" },
-              { label: "Phone", value: v.user?.phone ?? "—" },
+              { label: "Phone", value: v.user?.phone ?? v.phone ?? "—" },
               { label: "Matric No.", value: v.user?.matricNumber ?? "—" },
-              { label: "Categories", value: (v.categories ?? []).join(", ") || "—" },
+              { label: "Categories", value: v.categories?.map((c) => c.name).join(", ") || (v.itemsSold ?? []).join(", ") || "—" },
               { label: "Sale Type", value: v.saleType ?? "—" },
               { label: "Registered", value: new Date(v.createdAt).toLocaleDateString("en-NG", { day: "2-digit", month: "short", year: "numeric" }) },
             ].map(({ label, value }) => (
@@ -121,15 +127,12 @@ export default function VendorDetailPage() {
             </div>
             {v.user?.studentIdUrl ? (
               <a href={v.user.studentIdUrl} target="_blank" rel="noopener noreferrer" title="Click to view full size student ID">
-                <div className="relative w-full h-[180px] rounded-[10px] overflow-hidden border-2 border-[#2E7D32]/20 hover:border-[#2E7D32] transition-colors cursor-zoom-in">
-                  <Image
-                    src={v.user.studentIdUrl}
-                    alt="Student ID card"
-                    fill
-                    className="object-cover object-top"
-                    sizes="300px"
-                  />
-                </div>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={v.user.studentIdUrl}
+                  alt="Student ID card"
+                  className="w-full h-[180px] object-cover object-top rounded-[10px] border-2 border-[#2E7D32]/20 hover:border-[#2E7D32] transition-colors cursor-zoom-in"
+                />
                 <p className="font-jakarta text-[11px] text-[#9B9B9B] text-center mt-[6px]">Click to view full size</p>
               </a>
             ) : (
@@ -139,6 +142,7 @@ export default function VendorDetailPage() {
               </div>
             )}
           </div>
+
 
           {/* Actions */}
           {v.status === "PENDING" && (
@@ -161,26 +165,61 @@ export default function VendorDetailPage() {
           )}
         </div>
 
-        {/* Products */}
-        <div className="lg:col-span-2 bg-white rounded-[12px] border border-[#EAEAEA] overflow-hidden">
-          <div className="px-[20px] py-[16px] border-b border-[#EAEAEA]">
-            <p className="font-satoshi font-bold text-[15px] text-[#151515]">Products ({prods.length})</p>
-          </div>
-          {prods.length === 0 ? (
-            <p className="px-[20px] py-[24px] font-jakarta text-[13px] text-[#9B9B9B]">No products listed.</p>
-          ) : (
-            <div className="divide-y divide-[#EAEAEA]">
-              {prods.map((p) => (
-                <div key={p.id} className="px-[20px] py-[12px] flex items-center justify-between">
-                  <div>
-                    <p className="font-jakarta font-semibold text-[13px] text-[#151515]">{p.name}</p>
-                    <p className="font-jakarta text-[11px] text-[#9B9B9B]">Stock: {p.stock} · {p.isAvailable ? "Available" : "Out of Stock"}</p>
+        {/* Products / Items description */}
+        <div className="lg:col-span-2 space-y-[16px]">
+          {/* What they plan to sell — always shown for pending vendors */}
+          {(v.itemsSold?.length || v.description) && (
+            <div className="bg-white rounded-[12px] border border-[#EAEAEA] overflow-hidden">
+              <div className="px-[20px] py-[16px] border-b border-[#EAEAEA]">
+                <p className="font-satoshi font-bold text-[15px] text-[#151515]">What they plan to sell</p>
+                <p className="font-jakarta text-[11px] text-[#9B9B9B] mt-[2px]">Provided during registration</p>
+              </div>
+              <div className="px-[20px] py-[16px]">
+                {v.itemsSold && v.itemsSold.length > 0 && (
+                  <div className="flex flex-wrap gap-[8px] mb-[12px]">
+                    {v.itemsSold.map((item) => (
+                      <span key={item} className="bg-[#D8FFDA] text-[#2E7D32] font-jakarta text-[12px] font-medium px-[10px] py-[4px] rounded-[5px]">
+                        {item}
+                      </span>
+                    ))}
                   </div>
-                  <p className="font-jakarta font-bold text-[13px] text-[#2E7D32]">{formatNaira(p.price)}</p>
-                </div>
-              ))}
+                )}
+                {v.description && (
+                  <p className="font-jakarta text-[13px] text-[#545454] leading-[1.6]">{v.description}</p>
+                )}
+              </div>
             </div>
           )}
+
+          {/* Actual listed products */}
+          <div className="bg-white rounded-[12px] border border-[#EAEAEA] overflow-hidden">
+            <div className="px-[20px] py-[16px] border-b border-[#EAEAEA]">
+              <p className="font-satoshi font-bold text-[15px] text-[#151515]">Listed Products ({prods.length})</p>
+            </div>
+            {prods.length === 0 ? (
+              <p className="px-[20px] py-[24px] font-jakarta text-[13px] text-[#9B9B9B]">No products listed yet.</p>
+            ) : (
+              <div className="divide-y divide-[#EAEAEA]">
+                {prods.map((p) => {
+                  const img = p.images?.[0] ?? p.imageUrls?.[0];
+                  return (
+                    <div key={p.id} className="px-[20px] py-[12px] flex items-center gap-[12px]">
+                      <div className="w-[48px] h-[48px] rounded-[8px] bg-[#EAEAEA] overflow-hidden shrink-0 relative">
+                        {img
+                          ? <img src={img} alt={p.name} className="w-full h-full object-cover" />
+                          : <span className="flex items-center justify-center h-full font-jakarta text-[10px] text-[#9B9B9B]">—</span>
+                        }
+                      </div>
+                      <p className="font-jakarta font-semibold text-[13px] text-[#151515] flex-1">{p.name}</p>
+                      <span className="font-jakarta text-[11px] text-[#9B9B9B] bg-[#EAEAEA] px-[8px] py-[3px] rounded-full shrink-0">
+                        {p.saleType === "PREORDER" ? "Preorder" : "In Stock"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

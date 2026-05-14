@@ -7,7 +7,7 @@ import {
   Shirt, BookOpen, Smartphone, ShoppingBasket, Dumbbell, Sparkles, Package,
 } from "lucide-react";
 import ScreenHeader from "@/components/layout/ScreenHeader";
-import { useCategories } from "@/hooks/useProducts";
+import { useCategories, useSubcategories } from "@/hooks/useProducts";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/lib/constants";
 
@@ -254,13 +254,15 @@ export default function CategoriesPage() {
   const { data: apiCategories, isLoading } = useCategories();
 
   // Match API categories (by name) to STATIC_CATEGORIES (which hold the subcategory UI data)
-  // API gives us real UUIDs; STATIC_CATEGORIES give us the subcategory sections
   const mergedCategories = STATIC_CATEGORIES.map((staticCat) => {
     const apiMatch = apiCategories?.find((a) => a.name === staticCat.name);
     return { ...staticCat, apiId: apiMatch?.id ?? null };
   });
 
   const currentCategory = mergedCategories[selectedIndex];
+
+  // Fetch real subcategories for the selected parent so we can route by real ID
+  const { data: subcategories } = useSubcategories(currentCategory.apiId);
 
   const filteredSections = currentCategory.sections
     .map((section) => ({
@@ -272,7 +274,16 @@ export default function CategoriesPage() {
     .filter((section) => section.items.length > 0);
 
   const handleItemPress = (item: SubCategoryItem) => {
-    router.push(`${ROUTES.PRODUCTS}?title=${encodeURIComponent(item.name)}`);
+    // Find the real API subcategory ID by matching name (case-insensitive)
+    const match = subcategories?.find(
+      (s) => s.name.toLowerCase() === item.name.toLowerCase()
+    );
+    if (match) {
+      router.push(`${ROUTES.CATEGORIES}/${match.id}`);
+    } else if (currentCategory.apiId) {
+      // Fallback: show all products in the parent category
+      router.push(`${ROUTES.CATEGORIES}/${currentCategory.apiId}`);
+    }
   };
 
   const handleSeeAll = () => {

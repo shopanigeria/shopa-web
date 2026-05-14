@@ -228,7 +228,7 @@ function LoginForm() {
           // Vendor portal: /vendor/signup is the vendor registration flow
           <p className="text-center text-[14px] font-medium tracking-[-0.56px] leading-[28px] text-[#151515]">
             Don&apos;t have a vendor account?{" "}
-            <Link href="/vendor/signup" className="text-[#FDC500] font-semibold underline">Sign up here</Link>
+            <Link href="vendor.shopshopa.com.ng/vendor/signup" className="text-[#FDC500] font-semibold underline">Sign up here</Link>
           </p>
         ) : (
           // Customer portal: standard customer signup
@@ -250,14 +250,7 @@ function LoginForm() {
             Vendor Login
           </a>
         </p>
-      )}
-
-      {config.showAdminLink && (
-        <p className="text-center text-[13px] font-medium tracking-[-0.04em] leading-[28px] text-[#9B9B9B] mt-[2px]">
-          Are you a campus admin?{" "}
-          <Link href="/admin/mock-login" className="text-[#2E7D32] font-semibold underline">Admin Login</Link>
-        </p>
-      )}
+      )} 
     </div>
   );
 }

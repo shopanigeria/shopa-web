@@ -20,10 +20,7 @@ export function usePushNotifications() {
         if (!token) return;
 
         // Register token with backend
-        await apiClient.post('/notifications/register-device', {
-          fcmToken: token,
-          platform: 'web',
-        });
+        await apiClient.post('/notifications/fcm-token', { token });
       } catch {
         // Silent fail — notifications are non-critical
       }

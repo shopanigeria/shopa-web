@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Store, Users, MessageSquare, Check, X } from "lucide-react";
+import { Store, MessageSquare, Check, X } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/stores/auth.store";
 import { apiClient } from "@/lib/api/client";
@@ -71,6 +71,15 @@ export default function AdminDashboardPage() {
     enabled: !isMock,
   });
 
+  const { data: allVendors } = useQuery<VendorApp[]>({
+    queryKey: ["admin-all-vendors"],
+    queryFn: async () => {
+      const { data } = await apiClient.get("/vendors");
+      return data?.data ?? data ?? [];
+    },
+    enabled: !isMock,
+  });
+
   const verifyMutation = useMutation({
     mutationFn: async ({ id, status, reason }: { id: string; status: string; reason?: string }) => {
       if (isMock) { toast.success(`Vendor ${status.toLowerCase()}. (mock)`); setRejectModal(null); return; }
@@ -87,27 +96,29 @@ export default function AdminDashboardPage() {
   // Compute stats from fetched lists when analytics endpoint returns incomplete data
   const apps = (pendingVendors ?? (isMock ? MOCK_APPS : [])).slice(0, 5);
   const recentDisputes = (disputes ?? (isMock ? MOCK_DISPUTES : [])).slice(0, 5);
+  const unresolvedDisputes = (disputes ?? (isMock ? MOCK_DISPUTES : [])).filter(
+    (d) => !["RESOLVED", "CLOSED"].includes(d.status)
+  );
   const stats: Analytics = {
-    totalVendors:   analytics?.totalVendors  ?? (isMock ? MOCK_ANALYTICS.totalVendors : 0),
+    totalVendors:   allVendors?.length ?? analytics?.totalVendors ?? (isMock ? MOCK_ANALYTICS.totalVendors : 0),
     pendingVendors: analytics?.pendingVendors ?? pendingVendors?.length ?? (isMock ? MOCK_ANALYTICS.pendingVendors : 0),
     totalStudents:  analytics?.totalStudents  ?? (isMock ? MOCK_ANALYTICS.totalStudents : 0),
-    openDisputes:   analytics?.openDisputes   ?? disputes?.filter((d) => d.status === "OPEN").length ?? (isMock ? MOCK_ANALYTICS.openDisputes : 0),
+    openDisputes:   unresolvedDisputes.length ?? analytics?.openDisputes ?? (isMock ? MOCK_ANALYTICS.openDisputes : 0),
   };
   const adminName = user ? `${user.firstName} ${user.lastName}` : "Admin";
 
   return (
-    <AdminLayout campusName="Crawford University">
+    <AdminLayout >
       <div className="mb-[24px]">
         <h1 className="font-satoshi font-bold text-[22px] text-[#151515]">Welcome back, {adminName}!</h1>
-        <p className="font-jakarta text-[13px] text-[#9B9B9B] mt-[2px]">Crawford University Campus Admin</p>
+        <p className="font-jakarta text-[13px] text-[#9B9B9B] mt-[2px]">{user?.campus?.name ?? "Campus"} Admin</p>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-[12px] mb-[32px]">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-[12px] mb-[32px]">
         <StatsCard label="Total Vendors" value={stats.totalVendors} icon={Store} iconBg="bg-[#D8FFDA]" iconColor="text-[#2E7D32]" />
         <StatsCard label="Pending Applications" value={stats.pendingVendors} icon={Store} iconBg="bg-[#FFF3E0]" iconColor="text-[#FF9800]" />
-        <StatsCard label="Active Students" value={stats.totalStudents} icon={Users} iconBg="bg-[#E3F2FD]" iconColor="text-[#1565C0]" />
-        <StatsCard label="Open Disputes" value={stats.openDisputes} icon={MessageSquare} iconBg="bg-[#FFEBEE]" iconColor="text-[#E53935]" />
+        <StatsCard label="Unresolved Disputes" value={stats.openDisputes} icon={MessageSquare} iconBg="bg-[#FFEBEE]" iconColor="text-[#E53935]" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-[24px]">

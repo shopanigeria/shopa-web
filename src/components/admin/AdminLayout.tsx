@@ -3,15 +3,15 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Store, MessageSquare, Users, Bell, LogOut } from "lucide-react";
+import { LayoutDashboard, Store, MessageSquare, Bell, LogOut } from "lucide-react";
 import { useAuthStore } from "@/stores/auth.store";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { label: "Dashboard",  href: "/admin/dashboard",  Icon: LayoutDashboard },
   { label: "Vendors",    href: "/admin/vendors",     Icon: Store },
   { label: "Disputes",   href: "/admin/disputes",    Icon: MessageSquare },
-  { label: "Students",   href: "/admin/students",    Icon: Users },
 ];
 
 export function AdminLayout({ children, campusName }: { children: React.ReactNode; campusName?: string }) {
@@ -25,6 +25,8 @@ export function AdminLayout({ children, campusName }: { children: React.ReactNod
   }
 
   const adminName = user ? `${user.firstName} ${user.lastName}` : "Admin";
+  const resolvedCampusName = campusName ?? user?.campus?.name ?? "Campus Admin";
+  usePushNotifications();
 
   return (
     <div className="bg-[#F7FFF8] flex min-h-screen">
@@ -37,7 +39,7 @@ export function AdminLayout({ children, campusName }: { children: React.ReactNod
           <div className="w-[1px] h-[20px] bg-[#EAEAEA] mx-[2px]" />
           <div className="min-w-0">
             <p className="font-jakarta text-[10px] font-bold text-[#9B9B9B] uppercase tracking-[0.06em]">Admin</p>
-            <p className="font-jakarta text-[11px] font-semibold text-[#151515] truncate">{campusName ?? "Campus"}</p>
+            <p className="font-jakarta text-[11px] font-semibold text-[#151515] truncate">{resolvedCampusName}</p>
           </div>
         </div>
 
@@ -80,7 +82,7 @@ export function AdminLayout({ children, campusName }: { children: React.ReactNod
           {/* Mobile: logo. Desktop: campus name */}
           <div>
             <Image src="/images/logo.svg" alt="Shopa" width={64} height={24} priority className="md:hidden" />
-            <p className="hidden md:block font-satoshi font-bold text-[15px] text-[#151515]">{campusName ?? "Campus Admin"}</p>
+            <p className="hidden md:block font-satoshi font-bold text-[15px] text-[#151515]">{resolvedCampusName}</p>
           </div>
 
           <div className="flex items-center gap-[10px]">
@@ -117,6 +119,10 @@ export function AdminLayout({ children, campusName }: { children: React.ReactNod
               </Link>
             );
           })}
+          <button type="button" onClick={handleLogout} className="flex flex-col items-center gap-[2px] flex-1">
+            <LogOut size={22} className="text-[#E53935]" strokeWidth={1.5} />
+            <span className="font-jakarta text-[10px] text-[#E53935] tracking-[-0.04em]">Sign Out</span>
+          </button>
         </div>
       </nav>
     </div>

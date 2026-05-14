@@ -1,8 +1,9 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Bell } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/stores/auth.store";
 import { apiClient } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
@@ -73,6 +74,7 @@ export default function VendorNotificationsPage() {
   const router = useRouter();
   const { user } = useAuthStore();
   const isMock = user?.id === "mock-vendor-001";
+  const queryClient = useQueryClient();
 
   const { data: notifications, isLoading } = useQuery<Notification[]>({
     queryKey: ["vendor-notifications"],
@@ -81,7 +83,16 @@ export default function VendorNotificationsPage() {
       return res.data?.data ?? res.data ?? [];
     },
     enabled: !isMock,
+    staleTime: 0,
   });
+
+  // Mark all as read when page opens
+  useEffect(() => {
+    if (isMock) return;
+    apiClient.post("/notifications/mark-all-read").then(() => {
+      queryClient.invalidateQueries({ queryKey: ["vendor-unread-notifications"] });
+    }).catch(() => {});
+  }, [isMock, queryClient]);
 
   const items = isMock ? MOCK_NOTIFICATIONS : (notifications ?? []);
 
