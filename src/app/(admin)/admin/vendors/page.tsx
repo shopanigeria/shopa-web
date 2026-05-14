@@ -22,18 +22,12 @@ interface Vendor {
   vendorCategories?: { category: { id: string; name: string } }[];
 }
 
-const MOCK_VENDORS: Vendor[] = [
-  { id: "v1", storeName: "Fresh Provisions", status: "PENDING", createdAt: new Date().toISOString(), user: { firstName: "Tolu", lastName: "Adeyemi", email: "tolu@test.com" }, categories: ["Provisions"] },
-  { id: "v2", storeName: "Campus Gadgets", status: "APPROVED", createdAt: new Date().toISOString(), user: { firstName: "Emeka", lastName: "Obi", email: "emeka@test.com" }, categories: ["Gadgets & Accessories"] },
-  { id: "v3", storeName: "Style Hub", status: "REJECTED", createdAt: new Date().toISOString(), user: { firstName: "Amaka", lastName: "Eze", email: "amaka@test.com" }, categories: ["Clothing & Accessories"] },
-];
 
 export default function AdminVendorsPage() {
   const queryClient = useQueryClient();
   const [actionModal, setActionModal] = useState<{ vendor: Vendor; action: "approve" | "reject" | "delete" } | null>(null);
 
   const { user } = useAuthStore();
-  const isMock = user?.id === "mock-admin-001";
   const { data: vendors, isLoading } = useQuery<Vendor[]>({
     queryKey: ["admin-vendors", user?.campusId],
     queryFn: async () => {
@@ -49,12 +43,11 @@ export default function AdminVendorsPage() {
       [...approved, ...pending].forEach((v: Vendor) => map.set(v.id, v));
       return Array.from(map.values());
     },
-    enabled: !isMock && !!user?.campusId,
+    enabled: !!user?.campusId,
   });
 
   const verifyMutation = useMutation({
     mutationFn: async ({ id, status, reason }: { id: string; status: string; reason?: string }) => {
-      if (isMock) { toast.success(`Vendor ${status.toLowerCase()}. (mock)`); setActionModal(null); return; }
       await apiClient.patch(`/vendors/admin/${id}/verify`, { status, ...(reason && { reason }) });
     },
     onSuccess: () => { toast.success("Vendor updated."); queryClient.invalidateQueries({ queryKey: ["admin-vendors"] }); setActionModal(null); },
@@ -63,7 +56,6 @@ export default function AdminVendorsPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
-      if (isMock) { toast.success("Deletion request sent. (mock)"); setActionModal(null); return; }
       await apiClient.post(`/vendors/admin/${id}/deletion-request`, { reason });
     },
     onSuccess: () => { toast.success("Deletion request sent to super admin."); setActionModal(null); },
@@ -72,7 +64,7 @@ export default function AdminVendorsPage() {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const all = (vendors ?? MOCK_VENDORS).filter((v) =>
+  const all = (vendors ?? []).filter((v) =>
     (!search || v.storeName.toLowerCase().includes(search.toLowerCase()) || `${v.user?.firstName} ${v.user?.lastName}`.toLowerCase().includes(search.toLowerCase())) &&
     (!statusFilter || v.status === statusFilter)
   );

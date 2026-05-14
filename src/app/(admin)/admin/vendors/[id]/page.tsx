@@ -29,21 +29,6 @@ interface VendorDetail {
 }
 interface Product { id: string; name: string; price: number; stock: number; isAvailable?: boolean; saleType?: string; images?: string[]; imageUrls?: string[]; }
 
-const MOCK_VENDOR: VendorDetail = {
-  id: "v1", storeName: "Fresh Provisions", description: "Quality food items for students.", status: "PENDING",
-  createdAt: new Date().toISOString(),
-  phone: "08012345678",
-  user: {
-    firstName: "Tolu", lastName: "Adeyemi", email: "tolu@crawford.edu",
-    phone: "08012345678", matricNumber: "CSC/2021/001",
-    studentIdUrl: "https://images.unsplash.com/photo-1591278169757-deac26e49555?w=600&q=80",
-  },
-  categories: [{ id: "1", name: "Provisions" }], saleType: "IN_STOCK",
-};
-const MOCK_PRODUCTS: Product[] = [
-  { id: "p1", name: "Indomie Pack (12)", price: 3500, stock: 20, isAvailable: true },
-  { id: "p2", name: "Milo Tin 400g", price: 4200, stock: 15, isAvailable: true },
-];
 
 export default function VendorDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -75,8 +60,12 @@ export default function VendorDetailPage() {
     onError: () => toast.error("Request failed."),
   });
 
-  const v = vendor ?? MOCK_VENDOR;
-  const prods = products ?? vendor?.products ?? MOCK_PRODUCTS;
+  if (!vendor && !products) {
+    return <AdminLayout><div className="flex justify-center py-20"><div className="h-8 w-8 rounded-full border-2 border-[#2E7D32] border-t-transparent animate-spin" /></div></AdminLayout>;
+  }
+
+  const v = vendor!;
+  const prods = products ?? vendor?.products ?? [];
 
   return (
     <AdminLayout >

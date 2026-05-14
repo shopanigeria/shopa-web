@@ -34,15 +34,6 @@ interface Analytics {
   openDisputes: number;
 }
 
-const MOCK_ANALYTICS: Analytics = { totalVendors: 24, pendingVendors: 5, totalStudents: 312, openDisputes: 8 };
-const MOCK_APPS: VendorApp[] = [
-  { id: "v1", storeName: "Fresh Provisions", status: "PENDING", createdAt: new Date().toISOString(), user: { firstName: "Tolu", lastName: "Adeyemi", email: "tolu@crawford.edu" } },
-  { id: "v2", storeName: "Campus Gadgets", status: "PENDING", createdAt: new Date().toISOString(), user: { firstName: "Emeka", lastName: "Obi", email: "emeka@crawford.edu" } },
-];
-const MOCK_DISPUTES: Dispute[] = [
-  { id: "d1", status: "OPEN", reason: "Item not delivered", createdAt: new Date().toISOString(), order: { orderNumber: "12345678" }, user: { firstName: "Sade", lastName: "Bello" } },
-  { id: "d2", status: "UNDER_REVIEW", reason: "Wrong item sent", createdAt: new Date().toISOString(), order: { orderNumber: "87654321" }, user: { firstName: "Kelvin", lastName: "Osei" } },
-];
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-NG", { day: "2-digit", month: "short", year: "numeric" });
@@ -53,17 +44,13 @@ export default function AdminDashboardPage() {
   const queryClient = useQueryClient();
   const [rejectModal, setRejectModal] = useState<VendorApp | null>(null);
 
-  const isMock = user?.id === "mock-admin-001";
-
   const { data: analytics } = useQuery<Analytics>({
     queryKey: ["admin-analytics"],
     queryFn: async () => { const { data } = await apiClient.get("/analytics/admin"); return data?.data ?? data; },
-    enabled: !isMock,
   });
   const { data: pendingVendors } = useQuery<VendorApp[]>({
     queryKey: ["admin-pending-vendors"],
     queryFn: async () => { const { data } = await apiClient.get("/vendors/admin/pending"); return data?.data ?? data ?? []; },
-    enabled: !isMock,
   });
   const { data: disputes } = useQuery<Dispute[]>({
     queryKey: ["admin-disputes", user?.campusId],
@@ -73,7 +60,6 @@ export default function AdminDashboardPage() {
       });
       return data?.data ?? data ?? [];
     },
-    enabled: !isMock,
   });
 
   const { data: allVendors } = useQuery<VendorApp[]>({
@@ -84,12 +70,11 @@ export default function AdminDashboardPage() {
       });
       return data?.data ?? data ?? [];
     },
-    enabled: !isMock && !!user?.campusId,
+    enabled: !!user?.campusId,
   });
 
   const verifyMutation = useMutation({
     mutationFn: async ({ id, status, reason }: { id: string; status: string; reason?: string }) => {
-      if (isMock) { toast.success(`Vendor ${status.toLowerCase()}. (mock)`); setRejectModal(null); return; }
       await apiClient.patch(`/vendors/admin/${id}/verify`, { status, ...(reason && { reason }) });
     },
     onSuccess: () => {
@@ -100,17 +85,16 @@ export default function AdminDashboardPage() {
     onError: () => toast.error("Action failed."),
   });
 
-  // Compute stats from fetched lists when analytics endpoint returns incomplete data
-  const apps = (pendingVendors ?? (isMock ? MOCK_APPS : [])).slice(0, 5);
-  const recentDisputes = (disputes ?? (isMock ? MOCK_DISPUTES : [])).slice(0, 5);
-  const unresolvedDisputes = (disputes ?? (isMock ? MOCK_DISPUTES : [])).filter(
-    (d) => !["RESOLVED", "CLOSED"].includes(d.status)
+  const apps = (pendingVendors ?? []).slice(0, 5);
+  const recentDisputes = (disputes ?? []).slice(0, 5);
+  const unresolvedDisputes = (disputes ?? []).filter(
+    (d: Dispute) => !["RESOLVED", "CLOSED"].includes(d.status)
   );
   const stats: Analytics = {
-    totalVendors:   allVendors?.length ?? analytics?.totalVendors ?? (isMock ? MOCK_ANALYTICS.totalVendors : 0),
-    pendingVendors: analytics?.pendingVendors ?? pendingVendors?.length ?? (isMock ? MOCK_ANALYTICS.pendingVendors : 0),
-    totalStudents:  analytics?.totalStudents  ?? (isMock ? MOCK_ANALYTICS.totalStudents : 0),
-    openDisputes:   unresolvedDisputes.length ?? analytics?.openDisputes ?? (isMock ? MOCK_ANALYTICS.openDisputes : 0),
+    totalVendors:   allVendors?.length ?? analytics?.totalVendors ?? 0,
+    pendingVendors: analytics?.pendingVendors ?? pendingVendors?.length ?? 0,
+    totalStudents:  analytics?.totalStudents ?? 0,
+    openDisputes:   unresolvedDisputes.length ?? analytics?.openDisputes ?? 0,
   };
   const adminName = user ? `${user.firstName} ${user.lastName}` : "Admin";
 

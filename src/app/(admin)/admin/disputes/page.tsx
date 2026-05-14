@@ -20,16 +20,9 @@ interface Dispute {
   raisedBy?: { firstName: string; lastName: string; email?: string };
 }
 
-const MOCK_DISPUTES: Dispute[] = [
-  { id: "d1", status: "VENDOR_RESPONDED", reason: "Item not delivered", createdAt: new Date(Date.now() - 1000 * 60 * 60 * 30).toISOString(), order: { orderNumber: "12345678", vendor: { storeName: "Fresh Provisions" }, user: { firstName: "Sade", lastName: "Bello" } } },
-  { id: "d2", status: "OPEN", reason: "Wrong item received", createdAt: new Date().toISOString(), order: { orderNumber: "87654321", vendor: { storeName: "Campus Gadgets" }, user: { firstName: "Kelvin", lastName: "Osei" } } },
-  { id: "d3", status: "RESOLVED", reason: "Item arrived damaged", createdAt: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString(), order: { orderNumber: "11223344", vendor: { storeName: "Style Hub" }, user: { firstName: "Ngozi", lastName: "Eze" } } },
-  { id: "d4", status: "VENDOR_TIMEOUT", reason: "Vendor disappeared after payment", createdAt: new Date(Date.now() - 1000 * 60 * 60 * 55).toISOString(), order: { orderNumber: "55667788", vendor: { storeName: "Bad Store" }, user: { firstName: "Temi", lastName: "Adeyemi" } } },
-];
 
 export default function AdminDisputesPage() {
   const { user } = useAuthStore();
-  const isMock = user?.id === "mock-admin-001";
   const { data: disputes, isLoading } = useQuery<Dispute[]>({
     queryKey: ["admin-disputes", user?.campusId],
     queryFn: async () => {
@@ -38,13 +31,12 @@ export default function AdminDisputesPage() {
       });
       return data?.data ?? data ?? [];
     },
-    enabled: !isMock,
   });
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
-  const all = (disputes ?? MOCK_DISPUTES).filter((d) =>
+  const all = (disputes ?? []).filter((d) =>
     (!search || d.reason.toLowerCase().includes(search.toLowerCase()) || (d.order?.orderNumber ?? "").includes(search)) &&
     (!statusFilter || d.status === statusFilter)
   );
