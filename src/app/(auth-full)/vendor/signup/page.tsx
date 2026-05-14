@@ -8,7 +8,6 @@ import { ChevronLeft, ChevronDown, Eye, EyeOff, Loader2, Check, Upload, X } from
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { apiClient } from "@/lib/api/client";
 import SuccessModal from "@/components/shared/SuccessModal";
 import { toast } from "sonner";
 

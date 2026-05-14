@@ -75,7 +75,6 @@ function CreateAdminModal({
       return result;
     },
     onSuccess: (created) => {
-      console.log("[Create admin success]", created);
       toast.success(`Admin account created for ${firstName} ${lastName}.`);
       onCreated(created as Admin);
       onClose();

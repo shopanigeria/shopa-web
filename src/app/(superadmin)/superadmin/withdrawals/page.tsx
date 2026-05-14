@@ -119,7 +119,7 @@ export default function WithdrawalsPage() {
         />
       )}
       {actionModal?.action === "reject" && (
-        <ConfirmModal title={`Reject withdrawal of ${formatNaira(actionModal.w.amount)}?`}
+        <ConfirmModal title={`Reject withdrawal of ${formatNaira(Number(actionModal.w.amount))}?`}
           confirmLabel="Reject" variant="danger"
           requireReason reasonLabel="Reason" reasonPlaceholder="Enter rejection reason..."
           isLoading={processMutation.isPending} onClose={() => setActionModal(null)}

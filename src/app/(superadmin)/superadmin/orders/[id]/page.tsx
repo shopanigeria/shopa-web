@@ -29,17 +29,6 @@ interface OrderDetail {
   payment?: { status: string; reference?: string; amount?: number; method?: string };
 }
 
-const MOCK_ORDER: OrderDetail = {
-  id: "o1", orderNumber: "AB123456", status: "DELIVERED", totalAmount: "40000",
-  deliveryAddress: "Room 5, Male Hostel",
-  createdAt: new Date("2026-02-26T10:00:00Z").toISOString(),
-  expectedDelivery: "2026-02-28",
-  deliveredAt: new Date("2026-02-28T08:00:00Z").toISOString(),
-  orderItems: [{ quantity: 2, price: "20000", product: { name: "Primark Shirt" } }],
-  user: { firstName: "Sade", lastName: "Bello", email: "sade@crawford.edu", phone: "08011111111" },
-  vendor: { storeName: "Fresh Provisions", campus: { name: "Crawford University" }, user: { firstName: "Tolu", lastName: "Adeyemi" } },
-  payment: { status: "SUCCESSFUL", reference: "PSK_REF_001", amount: 40000, method: "Card" },
-};
 
 function Row({ label, value }: { label: string; value: string }) {
   return (

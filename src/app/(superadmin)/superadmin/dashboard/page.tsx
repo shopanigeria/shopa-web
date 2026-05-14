@@ -14,6 +14,7 @@ interface AnalyticsData {
   totalRevenue?: number;
   platformFees?: number;
   totalWithdrawals?: number;
+  netRevenue?: number;
 }
 
 function SkeletonCard() {
