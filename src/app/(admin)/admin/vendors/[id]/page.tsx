@@ -10,7 +10,6 @@ import { toast } from "sonner";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { ConfirmModal } from "@/components/admin/ConfirmModal";
-import { formatNaira } from "@/lib/utils";
 
 interface VendorDetail {
   id: string;
@@ -18,6 +17,7 @@ interface VendorDetail {
   description?: string;
   status: string;
   logo?: string;
+  logoUrl?: string;
   phone?: string;
   itemsSold?: string[];
   saleType?: string;
@@ -38,7 +38,7 @@ const MOCK_VENDOR: VendorDetail = {
     phone: "08012345678", matricNumber: "CSC/2021/001",
     studentIdUrl: "https://images.unsplash.com/photo-1591278169757-deac26e49555?w=600&q=80",
   },
-  categories: ["Provisions"], saleType: "IN_STOCK",
+  categories: [{ id: "1", name: "Provisions" }], saleType: "IN_STOCK",
 };
 const MOCK_PRODUCTS: Product[] = [
   { id: "p1", name: "Indomie Pack (12)", price: 3500, stock: 20, isAvailable: true },
@@ -206,7 +206,7 @@ export default function VendorDetailPage() {
                     <div key={p.id} className="px-[20px] py-[12px] flex items-center gap-[12px]">
                       <div className="w-[48px] h-[48px] rounded-[8px] bg-[#EAEAEA] overflow-hidden shrink-0 relative">
                         {img
-                          ? <img src={img} alt={p.name} className="w-full h-full object-cover" />
+                          ? <Image src={img} alt={p.name} fill className="object-cover" sizes="48px" />
                           : <span className="flex items-center justify-center h-full font-jakarta text-[10px] text-[#9B9B9B]">—</span>
                         }
                       </div>
