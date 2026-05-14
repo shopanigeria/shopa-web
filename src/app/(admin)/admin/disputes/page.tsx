@@ -31,8 +31,13 @@ export default function AdminDisputesPage() {
   const { user } = useAuthStore();
   const isMock = user?.id === "mock-admin-001";
   const { data: disputes, isLoading } = useQuery<Dispute[]>({
-    queryKey: ["admin-disputes"],
-    queryFn: async () => { const { data } = await apiClient.get("/disputes"); return data?.data ?? data ?? []; },
+    queryKey: ["admin-disputes", user?.campusId],
+    queryFn: async () => {
+      const { data } = await apiClient.get("/disputes", {
+        params: user?.campusId ? { campusId: user.campusId } : undefined,
+      });
+      return data?.data ?? data ?? [];
+    },
     enabled: !isMock,
   });
 

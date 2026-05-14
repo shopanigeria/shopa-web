@@ -66,18 +66,25 @@ export default function AdminDashboardPage() {
     enabled: !isMock,
   });
   const { data: disputes } = useQuery<Dispute[]>({
-    queryKey: ["admin-disputes"],
-    queryFn: async () => { const { data } = await apiClient.get("/disputes"); return data?.data ?? data ?? []; },
+    queryKey: ["admin-disputes", user?.campusId],
+    queryFn: async () => {
+      const { data } = await apiClient.get("/disputes", {
+        params: user?.campusId ? { campusId: user.campusId } : undefined,
+      });
+      return data?.data ?? data ?? [];
+    },
     enabled: !isMock,
   });
 
   const { data: allVendors } = useQuery<VendorApp[]>({
-    queryKey: ["admin-all-vendors"],
+    queryKey: ["admin-all-vendors", user?.campusId],
     queryFn: async () => {
-      const { data } = await apiClient.get("/vendors");
+      const { data } = await apiClient.get("/vendors", {
+        params: user?.campusId ? { campusId: user.campusId } : undefined,
+      });
       return data?.data ?? data ?? [];
     },
-    enabled: !isMock,
+    enabled: !isMock && !!user?.campusId,
   });
 
   const verifyMutation = useMutation({
