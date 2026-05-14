@@ -18,15 +18,9 @@ interface Student {
   createdAt: string;
 }
 
-const MOCK_STUDENTS: Student[] = [
-  { id: "s1", firstName: "Sade", lastName: "Bello", email: "sade@crawford.edu", phone: "08011111111", isVerified: true, createdAt: new Date().toISOString() },
-  { id: "s2", firstName: "Kelvin", lastName: "Osei", email: "kelvin@crawford.edu", phone: "08022222222", isVerified: false, createdAt: new Date().toISOString() },
-  { id: "s3", firstName: "Ngozi", lastName: "Eze", email: "ngozi@crawford.edu", phone: "08033333333", isVerified: true, createdAt: new Date().toISOString() },
-];
 
 export default function AdminStudentsPage() {
   const { user } = useAuthStore();
-  const isMock = user?.id === "mock-admin-001";
   const { data: students, isLoading } = useQuery<Student[]>({
     queryKey: ["admin-students", user?.campusId],
     queryFn: async () => {
@@ -35,11 +29,10 @@ export default function AdminStudentsPage() {
       });
       return data?.data ?? data ?? [];
     },
-    enabled: !isMock,
   });
 
   const [search, setSearch] = useState("");
-  const all = (students ?? MOCK_STUDENTS).filter((s) =>
+  const all = (students ?? []).filter((s) =>
     !search ||
     `${s.firstName} ${s.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
     s.email.toLowerCase().includes(search.toLowerCase())

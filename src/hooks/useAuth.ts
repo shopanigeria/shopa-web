@@ -57,8 +57,17 @@ export function useAuth() {
       }
 
       setPortalError(null);
-      setUser(data.user);
-      queryClient.setQueryData(QUERY_KEYS.USER, data.user);
+      // Clear stale product cache before setting new user — prevents wrong-campus flash
+      queryClient.removeQueries({ queryKey: QUERY_KEYS.PRODUCTS });
+      queryClient.removeQueries({ queryKey: QUERY_KEYS.CATEGORIES });
+      // Force-fetch full profile so campusId is guaranteed before homepage renders
+      authService.getMe().then((fullUser) => {
+        setUser(fullUser);
+        queryClient.setQueryData(QUERY_KEYS.USER, fullUser);
+      }).catch(() => {
+        setUser(data.user);
+        queryClient.setQueryData(QUERY_KEYS.USER, data.user);
+      });
 
       // Register FCM token after successful login
       requestNotificationPermission().then((fcmToken) => {

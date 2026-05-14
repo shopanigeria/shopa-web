@@ -19,6 +19,7 @@ export function useProducts(query: ProductsQuery = {}) {
     queryKey: [...QUERY_KEYS.PRODUCTS, q],
     queryFn: () => productsService.getAll(q),
     staleTime: 0,
+    enabled: !!campusId,
   });
 }
 
@@ -45,6 +46,7 @@ export function usePopularProducts() {
     queryKey: [...QUERY_KEYS.PRODUCTS, "popular", campusId],
     queryFn: () => productsService.getPopular(campusId),
     staleTime: 5 * 60 * 1000,
+    enabled: !!campusId,
   });
 }
 
@@ -71,6 +73,6 @@ export function useCategoryProducts(categoryId: string, query: ProductsQuery = {
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
       lastPage.meta.page < lastPage.meta.totalPages ? lastPage.meta.page + 1 : undefined,
-    enabled: !!categoryId,
+    enabled: !!categoryId && !!campusId,
   });
 }

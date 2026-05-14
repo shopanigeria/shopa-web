@@ -5,7 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { ChevronLeft, Clock, AlertTriangle } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuthStore } from "@/stores/auth.store";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "sonner";
 import { AdminLayout } from "@/components/admin/AdminLayout";
@@ -53,28 +52,6 @@ interface DisputeDetail {
 
 const ADMIN_ACTIONABLE = ["VENDOR_RESPONDED", "UNDER_REVIEW"];
 
-// ── Mock data (with vendor response for testing the resolution flow) ──────────
-
-const MOCK_DISPUTE: DisputeDetail = {
-  id: "d1",
-  status: "VENDOR_RESPONDED",
-  reason: "Item not delivered",
-  description: "I placed an order 3 days ago and it has not been delivered. The vendor stopped responding to my messages.",
-  proofUrls: [],
-  vendorResponse: "I'm sorry about the delay. There was a logistics issue on my end. The item was dispatched on the 28th but the delivery agent had issues locating the hostel. I have proof of dispatch below.",
-  vendorResponseAt: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(),
-  counterProofUrls: [],
-  createdAt: new Date(Date.now() - 1000 * 60 * 60 * 30).toISOString(),
-  vendorDeadlineAt: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(),
-  adminDeadlineAt: new Date(Date.now() + 1000 * 60 * 60 * 42).toISOString(), // 42h remaining
-  order: {
-    orderNumber: "12345678",
-    totalAmount: "5000",
-    orderItems: [{ quantity: 2, product: { name: "Indomie Pack (12)" } }],
-    user: { firstName: "Sade", lastName: "Bello", email: "sade@crawford.edu" },
-    vendor: { storeName: "Fresh Provisions", user: { firstName: "Tolu", lastName: "Adeyemi" } },
-  },
-};
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -207,20 +184,15 @@ export default function DisputeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { user } = useAuthStore();
-  const isMock = user?.id === "mock-admin-001";
-
   const [showResolveModal, setShowResolveModal] = useState(false);
 
-  const { data: dispute } = useQuery<DisputeDetail>({
+  const { data: dispute, isLoading } = useQuery<DisputeDetail>({
     queryKey: ["admin-dispute", id],
     queryFn: async () => { const { data } = await apiClient.get(`/disputes/${id}`); return data?.data ?? data; },
-    enabled: !isMock,
   });
 
   const resolveMutation = useMutation({
     mutationFn: async ({ resolution, refund }: { resolution: string; refund: boolean }) => {
-      if (isMock) { toast.success("Resolution submitted. (mock)"); setShowResolveModal(false); return; }
       await apiClient.patch(`/disputes/${id}/resolve`, {
         resolution,
         outcome: refund ? "REFUND_REQUESTED" : "NO_REFUND",
@@ -234,7 +206,15 @@ export default function DisputeDetailPage() {
     onError: () => toast.error("Failed to submit resolution."),
   });
 
-  const d = dispute ?? MOCK_DISPUTE;
+  if (isLoading) {
+    return <AdminLayout><div className="flex justify-center py-20"><div className="h-8 w-8 rounded-full border-2 border-[#2E7D32] border-t-transparent animate-spin" /></div></AdminLayout>;
+  }
+
+  if (!dispute) {
+    return <AdminLayout><p className="font-jakarta text-[14px] text-[#9B9B9B] px-[20px] py-[40px]">Dispute not found.</p></AdminLayout>;
+  }
+
+  const d = dispute;
   const adminHoursLeft = hoursRemaining(d.adminDeadlineAt);
   const canAct = ADMIN_ACTIONABLE.includes(d.status);
 
