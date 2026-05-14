@@ -14,3 +14,9 @@ Help & Support (/help/page.tsx)
 Terms & Policies (/terms/page.tsx)
 52. Content — Figma shows a blank/empty Terms page (just the header, no body text); code has placeholder terms text — the actual terms content is missing/pending
 
+//
+
+npm run dev:customer    # localhost:3000 — customer
+npm run dev:vendor      # localhost:3001 — vendor  
+npm run dev:admin       # localhost:3002 — university admin
+npm run dev:superadmin  # localhost:3003 — super admin

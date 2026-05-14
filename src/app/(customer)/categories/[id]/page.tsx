@@ -4,6 +4,8 @@ import { useState, Suspense } from "react";
 import { useParams } from "next/navigation";
 import { Package } from "lucide-react";
 import { useCategories, useProducts } from "@/hooks/useProducts";
+import { useQuery } from "@tanstack/react-query";
+import { apiClient } from "@/lib/api";
 import ProductCard from "@/components/customer/ProductCard";
 import ScreenHeader from "@/components/layout/ScreenHeader";
 import BackButton from "@/components/layout/BackButton";
@@ -40,15 +42,28 @@ function CategoryContent() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const { data: categories } = useCategories();
-  const category = categories?.find((c) => c.id === id);
+  const topLevelMatch = categories?.find((c) => c.id === id);
 
-  const { data, isLoading } = useProducts({
+  // If not a top-level category, fetch it directly (it's a subcategory)
+  const { data: fetchedCategory } = useQuery({
+    queryKey: ["category", id],
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ data?: { name: string }; name?: string }>(`/categories/${id}`);
+      return (data?.data ?? data) as { id: string; name: string };
+    },
+    enabled: !!id && !topLevelMatch,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const category = topLevelMatch ?? fetchedCategory;
+
+  const { data, isLoading, isError } = useProducts({
     categoryId: id,
     sortBy: toApiSort(sort),
     limit: 40,
   });
 
-  const allProducts = data?.data ?? [];
+  const allProducts = isError ? [] : (data?.data ?? []);
   const products = searchQuery
     ? allProducts.filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
     : allProducts;
@@ -135,7 +150,7 @@ function CategoryContent() {
           <div className="flex flex-col items-center justify-center py-20">
             <Package size={40} className="text-[#C2C2C2]" />
             <p className="mt-3 font-jakarta text-[13px] text-[#9B9B9B] text-center">
-              {searchQuery ? "No products match your search" : "No products available yet"}
+              {searchQuery ? "No products match your search" : "No products in this category yet"}
             </p>
           </div>
         ) : (

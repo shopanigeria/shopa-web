@@ -29,8 +29,7 @@ export default function SuperAdminStudentsPage() {
   const { data: students, isLoading } = useQuery<Student[]>({
     queryKey: ["superadmin-students"],
     queryFn: async () => {
-      // /users/pending-verifications returns all registered students
-      const { data } = await apiClient.get("/users/pending-verifications");
+      const { data } = await apiClient.get("/users/students");
       return data?.data ?? data ?? [];
     },
   });

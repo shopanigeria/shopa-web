@@ -17,9 +17,11 @@ interface AdminUser {
   firstName: string;
   lastName: string;
   email: string;
+  role?: string;
+  isVerified?: boolean;
+  isActive?: boolean;
   campus?: { id: string; name: string };
   campusId?: string;
-  isActive: boolean;
   createdAt: string;
 }
 
@@ -28,13 +30,8 @@ interface Campus {
   name: string;
 }
 
-const MOCK_ADMINS: AdminUser[] = [
-  { id: "a1", firstName: "Chidi", lastName: "Nwosu", email: "chidi@crawford.edu", campus: { id: "c1", name: "Crawford University" }, isActive: true, createdAt: new Date().toISOString() },
-];
-
-const MOCK_CAMPUSES: Campus[] = [
-  { id: "69345327-e2bb-4f39-935d-80feefcf16a8", name: "Crawford University" },
-];
+const MOCK_ADMINS: AdminUser[] = [];
+const MOCK_CAMPUSES: Campus[] = [];
 
 const inputClass = "w-full rounded-[8px] border border-[#EAEAEA] bg-[#F7FFF8] px-[12px] py-[10px] font-jakarta text-[13px] text-[#333333] placeholder:text-[#C2C2C2] focus:outline-none focus:border-[#2E7D32]";
 
@@ -61,7 +58,7 @@ export default function AdminsPage() {
 
   const { data: admins, isLoading } = useQuery<AdminUser[]>({
     queryKey: ["superadmin-admins"],
-    queryFn: async () => { const { data } = await apiClient.get("/users?role=admin"); return data?.data ?? data ?? []; },
+    queryFn: async () => { const { data } = await apiClient.get("/users/admins"); return data?.data ?? data ?? []; },
     enabled: !isMock,
   });
 
@@ -78,12 +75,11 @@ export default function AdminsPage() {
         resetForm();
         return;
       }
-      await apiClient.post("/auth/register", {
+      await apiClient.post("/auth/admin/create", {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         email: email.trim(),
         password,
-        role: "admin",
         campusId,
       });
     },
@@ -99,7 +95,7 @@ export default function AdminsPage() {
   const toggleMutation = useMutation({
     mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
       if (isMock) { toast.success(`Admin ${isActive ? "suspended" : "reactivated"}. (mock)`); setToggleTarget(null); return; }
-      await apiClient.patch(`/users/${id}`, { isActive: !isActive });
+      await apiClient.patch(`/users/admin/${id}/toggle-status`, { isActive: !isActive });
     },
     onSuccess: () => {
       toast.success("Admin status updated.");
@@ -153,9 +149,11 @@ export default function AdminsPage() {
           { key: "campus", label: "Campus", render: (r) =>
             <span className="font-jakarta text-[13px] text-[#333333]">{(r as unknown as AdminUser).campus?.name ?? "—"}</span>
           },
-          { key: "isActive", label: "Status", render: (r) =>
-            <StatusBadge status={(r as unknown as AdminUser).isActive ? "ACTIVE" : "SUSPENDED"} />
-          },
+          { key: "isActive", label: "Status", render: (r) => {
+            const a = r as unknown as AdminUser;
+            const active = a.isActive ?? a.isVerified ?? true;
+            return <StatusBadge status={active ? "ACTIVE" : "SUSPENDED"} />;
+          }},
           { key: "createdAt", label: "Created", render: (r) =>
             <span className="font-jakarta text-[12px] text-[#9B9B9B]">
               {new Date((r as unknown as AdminUser).createdAt).toLocaleDateString("en-NG", { day: "2-digit", month: "short", year: "numeric" })}
@@ -163,11 +161,12 @@ export default function AdminsPage() {
           },
           { key: "actions", label: "Actions", render: (r) => {
             const a = r as unknown as AdminUser;
+            const active = a.isActive ?? a.isVerified ?? true;
             return (
-              <button type="button" title={a.isActive ? "Suspend admin" : "Reactivate admin"}
+              <button type="button" title={active ? "Suspend admin" : "Reactivate admin"}
                 onClick={() => setToggleTarget(a)}
-                className={cn("font-jakarta text-[12px] font-semibold hover:underline", a.isActive ? "text-[#E53935]" : "text-[#2E7D32]")}>
-                {a.isActive ? "Suspend" : "Reactivate"}
+                className={cn("font-jakarta text-[12px] font-semibold hover:underline", active ? "text-[#E53935]" : "text-[#2E7D32]")}>
+                {active ? "Suspend" : "Reactivate"}
               </button>
             );
           }},
@@ -264,19 +263,22 @@ export default function AdminsPage() {
       )}
 
       {/* Suspend / reactivate confirm */}
-      {toggleTarget && (
-        <ConfirmModal
-          title={`${toggleTarget.isActive ? "Suspend" : "Reactivate"} ${toggleTarget.firstName} ${toggleTarget.lastName}?`}
-          message={toggleTarget.isActive
-            ? "This admin will lose access to their campus dashboard immediately."
-            : "This admin will regain access to their campus dashboard."}
-          confirmLabel={toggleTarget.isActive ? "Suspend" : "Reactivate"}
-          variant={toggleTarget.isActive ? "danger" : "primary"}
-          isLoading={toggleMutation.isPending}
-          onClose={() => setToggleTarget(null)}
-          onConfirm={() => toggleMutation.mutate({ id: toggleTarget.id, isActive: toggleTarget.isActive })}
-        />
-      )}
+      {toggleTarget && (() => {
+        const active = toggleTarget.isActive ?? toggleTarget.isVerified ?? true;
+        return (
+          <ConfirmModal
+            title={`${active ? "Suspend" : "Reactivate"} ${toggleTarget.firstName} ${toggleTarget.lastName}?`}
+            message={active
+              ? "This admin will lose access to their campus dashboard immediately."
+              : "This admin will regain access to their campus dashboard."}
+            confirmLabel={active ? "Suspend" : "Reactivate"}
+            variant={active ? "danger" : "primary"}
+            isLoading={toggleMutation.isPending}
+            onClose={() => setToggleTarget(null)}
+            onConfirm={() => toggleMutation.mutate({ id: toggleTarget.id, isActive: active })}
+          />
+        );
+      })()}
     </SuperAdminLayout>
   );
 }

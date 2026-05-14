@@ -277,7 +277,7 @@ export default function OrderDetailPage() {
       </div>
 
       {/* Fixed price summary card — no bottom nav offset */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[390px] z-20">
+      <div className="fixed bottom-0 left-0 right-0 w-full z-20">
         <div className="mx-0 bg-white rounded-t-[24px] shadow-[0px_-1px_1px_rgba(0,0,0,0.1)] px-[24px] pt-[20px] pb-[32px]">
           <div className="flex items-center justify-between mb-[10px]">
             <span className="font-jakarta text-[14px] text-[#333333] tracking-[-0.04em]">Subtotal</span>

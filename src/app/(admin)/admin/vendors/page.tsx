@@ -17,7 +17,9 @@ interface Vendor {
   status: string;
   createdAt: string;
   user?: { firstName: string; lastName: string; email: string };
-  categories?: string[];
+  categories?: { id: string; name: string }[] | string[];
+  itemsSold?: string[];
+  vendorCategories?: { category: { id: string; name: string } }[];
 }
 
 const MOCK_VENDORS: Vendor[] = [
@@ -34,7 +36,18 @@ export default function AdminVendorsPage() {
   const isMock = user?.id === "mock-admin-001";
   const { data: vendors, isLoading } = useQuery<Vendor[]>({
     queryKey: ["admin-vendors"],
-    queryFn: async () => { const { data } = await apiClient.get("/vendors"); return data?.data ?? data ?? []; },
+    queryFn: async () => {
+      const [allRes, pendingRes] = await Promise.all([
+        apiClient.get("/vendors"),
+        apiClient.get("/vendors/admin/pending"),
+      ]);
+      const approved = allRes.data?.data ?? allRes.data ?? [];
+      const pending = pendingRes.data?.data ?? pendingRes.data ?? [];
+      // Merge, deduplicate by id
+      const map = new Map<string, Vendor>();
+      [...approved, ...pending].forEach((v: Vendor) => map.set(v.id, v));
+      return Array.from(map.values());
+    },
     enabled: !isMock,
   });
 
@@ -64,7 +77,7 @@ export default function AdminVendorsPage() {
   );
 
   return (
-    <AdminLayout campusName="Crawford University">
+    <AdminLayout >
       <div className="flex items-center justify-between mb-[20px]">
         <div>
           <h1 className="font-satoshi font-bold text-[20px] md:text-[22px] text-[#151515]">Vendor Management</h1>
@@ -133,7 +146,15 @@ export default function AdminVendorsPage() {
               const v = row as unknown as Vendor;
               return (<div><p className="font-jakarta font-semibold text-[13px] text-[#151515]">{v.storeName}</p><p className="font-jakarta text-[11px] text-[#9B9B9B]">{v.user?.firstName} {v.user?.lastName}</p></div>);
             }},
-            { key: "categories", label: "Categories", render: (row) => <span className="font-jakarta text-[12px] text-[#545454]">{((row as unknown as Vendor).categories ?? []).join(", ") || "—"}</span> },
+            { key: "categories", label: "Categories", render: (row) => {
+    const v = row as unknown as Vendor;
+    const cats = v.vendorCategories?.map((vc) => (vc.category as { name: string }).name).join(", ")
+      || (v.categories as { name: string }[])?.map((c) => c.name).join(", ")
+      || (v.categories as string[])?.join(", ")
+      || v.itemsSold?.join(", ")
+      || "—";
+    return <span className="font-jakarta text-[12px] text-[#545454]">{cats}</span>;
+  }},
             { key: "status", label: "Status", render: (row) => <StatusBadge status={(row as unknown as Vendor).status} /> },
             { key: "createdAt", label: "Registered", render: (row) => <span className="font-jakarta text-[12px] text-[#9B9B9B]">{new Date((row as unknown as Vendor).createdAt).toLocaleDateString("en-NG", { day: "2-digit", month: "short", year: "numeric" })}</span> },
             { key: "actions", label: "Actions", render: (row) => {

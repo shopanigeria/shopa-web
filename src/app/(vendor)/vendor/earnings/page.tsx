@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Bell, Settings, X, Wallet, Banknote } from "lucide-react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/stores/auth.store";
 import { apiClient } from "@/lib/api/client";
 import { formatNaira } from "@/lib/utils";
@@ -15,7 +15,10 @@ import { cn } from "@/lib/utils";
 
 interface VendorBalance {
   availableBalance: number;
-  totalBalance: number;
+  withdrawableBalance: number;
+  totalEarned: number;
+  totalWithdrawn: number;
+  pendingWithdrawals: number;
 }
 
 interface Withdrawal {
@@ -29,7 +32,7 @@ interface Withdrawal {
 
 // ── Mock data ──────────────────────────────────────────────────────────────
 
-const MOCK_BALANCE: VendorBalance = { availableBalance: 100000, totalBalance: 300000 };
+const MOCK_BALANCE: VendorBalance = { availableBalance: 100000, withdrawableBalance: 75000, totalEarned: 300000, totalWithdrawn: 50000, pendingWithdrawals: 0 };
 
 const MOCK_WITHDRAWALS: Withdrawal[] = [
   { id: "w1", reference: "00000001", amount: 50000, status: "SUCCESSFUL", type: "CREDIT", createdAt: new Date("2026-03-22T14:30:00Z").toISOString() },
@@ -51,10 +54,10 @@ function formatDateTime(iso: string) {
 
 function StatusBadge({ status }: { status: string }) {
   const s = status.toUpperCase();
-  if (s === "SUCCESSFUL" || s === "COMPLETED") {
-    return <span className="bg-[#2E7D32] text-white font-jakarta text-[11px] font-semibold px-[10px] py-[3px] rounded-full">Successful</span>;
+  if (s === "SUCCESSFUL" || s === "COMPLETED" || s === "APPROVED") {
+    return <span className="bg-[#2E7D32] text-white font-jakarta text-[11px] font-semibold px-[10px] py-[3px] rounded-full">Completed</span>;
   }
-  if (s === "PENDING" || s === "APPROVED") {
+  if (s === "PENDING") {
     return <span className="bg-[#FDC500] text-white font-jakarta text-[11px] font-semibold px-[10px] py-[3px] rounded-full">Pending</span>;
   }
   return <span className="bg-[#E53935] text-white font-jakarta text-[11px] font-semibold px-[10px] py-[3px] rounded-full">Failed</span>;
@@ -68,13 +71,17 @@ function Backdrop({ onClose }: { onClose: () => void }) {
 
 // ── Withdrawal modal ───────────────────────────────────────────────────────
 
-function WithdrawalModal({ availableBalance, onClose, onConfirm, isLoading }: {
+interface BankAccount { accountNumber: string; bankName: string; accountName: string; }
+
+function WithdrawalModal({ availableBalance, savedAccount, onClose, onConfirm, isLoading }: {
   availableBalance: number;
+  savedAccount?: BankAccount | null;
   onClose: () => void;
   onConfirm: (data: { amount: number; accountNumber: string; bankName: string; accountName: string }) => void;
   isLoading: boolean;
 }) {
   const [amount, setAmount] = useState("");
+  const [useNewAccount, setUseNewAccount] = useState(!savedAccount);
   const [accountNumber, setAccountNumber] = useState("");
   const [bankName, setBankName] = useState("");
   const [accountName, setAccountName] = useState("");
@@ -82,12 +89,17 @@ function WithdrawalModal({ availableBalance, onClose, onConfirm, isLoading }: {
   function handleConfirm() {
     const num = parseFloat(amount);
     if (!num || num < 500) { toast.error("Minimum withdrawal is ₦500."); return; }
-    if (num > availableBalance) { toast.error("Amount exceeds available balance."); return; }
-    if (!accountNumber.trim() || !bankName.trim() || !accountName.trim()) {
+    if (num > availableBalance) { toast.error("Amount exceeds withdrawable balance."); return; }
+
+    const acct = useNewAccount
+      ? { accountNumber: accountNumber.trim(), bankName: bankName.trim(), accountName: accountName.trim() }
+      : { accountNumber: savedAccount!.accountNumber, bankName: savedAccount!.bankName, accountName: savedAccount!.accountName };
+
+    if (!acct.accountNumber || !acct.bankName || !acct.accountName) {
       toast.error("Please fill in all bank details.");
       return;
     }
-    onConfirm({ amount: num, accountNumber: accountNumber.trim(), bankName: bankName.trim(), accountName: accountName.trim() });
+    onConfirm({ amount: num, ...acct });
   }
 
   const inputClass = "w-full rounded-[8px] bg-[#EAEAEA] px-[14px] py-[14px] font-jakarta text-[14px] text-[#333333] placeholder:text-[#C2C2C2] focus:outline-none";
@@ -95,7 +107,7 @@ function WithdrawalModal({ availableBalance, onClose, onConfirm, isLoading }: {
   return (
     <>
       <Backdrop onClose={onClose} />
-      <div className="fixed inset-0 z-50 flex items-center justify-center px-[24px]">
+      <div className="fixed inset-0 z-50 flex items-center justify-center px-[24px] overflow-y-auto py-[24px]">
         <div className="bg-white rounded-[16px] px-[24px] pt-[28px] pb-[28px] w-full max-w-[360px] relative">
           <button type="button" aria-label="Close" onClick={onClose} className="absolute top-[16px] right-[16px]">
             <div className="w-[28px] h-[28px] rounded-full border-2 border-[#2E7D32] flex items-center justify-center">
@@ -103,86 +115,72 @@ function WithdrawalModal({ availableBalance, onClose, onConfirm, isLoading }: {
             </div>
           </button>
 
+          <p className="font-jakarta font-bold text-[16px] text-[#333333] tracking-[-0.04em] mb-[20px]">Request Withdrawal</p>
+
           <div className="flex flex-col gap-[16px] mb-[20px]">
             {/* Amount */}
             <div>
               <div className="flex items-center justify-between mb-[8px]">
-                <p className="font-jakarta font-bold text-[14px] text-[#333333] tracking-[-0.04em]">
-                  Amount to be withdrawn
-                </p>
+                <p className="font-jakarta font-bold text-[14px] text-[#333333] tracking-[-0.04em]">Amount</p>
                 <p className="font-jakarta text-[11px] text-[#9B9B9B] tracking-[-0.04em]">
                   Max: {formatNaira(availableBalance)}
                 </p>
               </div>
-              <input
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="Enter amount"
-                min="500"
-                max={availableBalance}
-                className={inputClass}
-              />
+              <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)}
+                placeholder="Min. ₦500" min="500" max={availableBalance} className={inputClass} />
               {parseFloat(amount) > availableBalance && (
                 <p className="font-jakarta text-[11px] text-[#E53935] tracking-[-0.04em] mt-[4px]">
-                  Amount cannot exceed your available balance.
+                  Amount exceeds withdrawable balance.
                 </p>
               )}
             </div>
 
-            {/* Account number */}
+            {/* Bank account selection */}
             <div>
-              <p className="font-jakarta font-bold text-[14px] text-[#333333] tracking-[-0.04em] mb-[8px]">
-                Account number
-              </p>
-              <input
-                type="text"
-                value={accountNumber}
-                onChange={(e) => setAccountNumber(e.target.value)}
-                placeholder="Enter account number"
-                maxLength={10}
-                className={inputClass}
-              />
-              <p className="font-jakarta text-[11px] text-[#9B9B9B] tracking-[-0.04em] mt-[6px] leading-[1.5]">
-                Please note that the account details you provide now is the account ALL your withdrawals will be processed to
-              </p>
-            </div>
+              <p className="font-jakarta font-bold text-[14px] text-[#333333] tracking-[-0.04em] mb-[10px]">Bank Account</p>
 
-            {/* Bank name */}
-            <div>
-              <p className="font-jakarta font-bold text-[14px] text-[#333333] tracking-[-0.04em] mb-[8px]">
-                Bank name
-              </p>
-              <input
-                type="text"
-                value={bankName}
-                onChange={(e) => setBankName(e.target.value)}
-                placeholder="Enter bank name"
-                className={inputClass}
-              />
-            </div>
+              {savedAccount && (
+                <>
+                  {/* Use saved account */}
+                  <button type="button" onClick={() => setUseNewAccount(false)}
+                    className={`w-full flex items-start gap-[12px] p-[12px] rounded-[8px] border-2 text-left mb-[8px] transition-colors ${!useNewAccount ? "border-[#2E7D32] bg-[#F7FFF8]" : "border-[#EAEAEA]"}`}>
+                    <div className={`w-[18px] h-[18px] rounded-full border-2 mt-[1px] shrink-0 flex items-center justify-center ${!useNewAccount ? "border-[#2E7D32] bg-[#2E7D32]" : "border-[#9B9B9B]"}`}>
+                      {!useNewAccount && <div className="w-[7px] h-[7px] rounded-full bg-white" />}
+                    </div>
+                    <div>
+                      <p className="font-jakarta font-semibold text-[13px] text-[#151515]">{savedAccount.bankName}</p>
+                      <p className="font-jakarta text-[12px] text-[#9B9B9B]">{savedAccount.accountNumber} — {savedAccount.accountName}</p>
+                    </div>
+                  </button>
 
-            {/* Name on account */}
-            <div>
-              <p className="font-jakarta font-bold text-[14px] text-[#333333] tracking-[-0.04em] mb-[8px]">
-                Name on account
-              </p>
-              <input
-                type="text"
-                value={accountName}
-                onChange={(e) => setAccountName(e.target.value)}
-                placeholder="Enter account name"
-                className={inputClass}
-              />
+                  {/* Use new account */}
+                  <button type="button" onClick={() => setUseNewAccount(true)}
+                    className={`w-full flex items-center gap-[12px] p-[12px] rounded-[8px] border-2 text-left transition-colors ${useNewAccount ? "border-[#2E7D32] bg-[#F7FFF8]" : "border-[#EAEAEA]"}`}>
+                    <div className={`w-[18px] h-[18px] rounded-full border-2 shrink-0 flex items-center justify-center ${useNewAccount ? "border-[#2E7D32] bg-[#2E7D32]" : "border-[#9B9B9B]"}`}>
+                      {useNewAccount && <div className="w-[7px] h-[7px] rounded-full bg-white" />}
+                    </div>
+                    <p className="font-jakarta font-semibold text-[13px] text-[#151515]">Use a different account</p>
+                  </button>
+                </>
+              )}
+
+              {/* New account fields */}
+              {useNewAccount && (
+                <div className="flex flex-col gap-[12px] mt-[12px]">
+                  <input type="text" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)}
+                    placeholder="Account number" maxLength={10} className={inputClass} />
+                  <input type="text" value={bankName} onChange={(e) => setBankName(e.target.value)}
+                    placeholder="Bank name (e.g GTB, Access)" className={inputClass} />
+                  <input type="text" value={accountName} onChange={(e) => setAccountName(e.target.value)}
+                    placeholder="Account name" className={inputClass} />
+                </div>
+              )}
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={handleConfirm}
-            disabled={isLoading || parseFloat(amount) > availableBalance}
-            className="w-full h-[50px] rounded-[8px] bg-[#2E7D32] font-jakarta text-[14px] font-semibold text-white disabled:opacity-50 hover:bg-[#1D5620] transition-colors mb-[12px]"
-          >
+          <button type="button" onClick={handleConfirm}
+            disabled={isLoading || !amount || parseFloat(amount) > availableBalance}
+            className="w-full h-[50px] rounded-[8px] bg-[#2E7D32] font-jakarta text-[14px] font-semibold text-white disabled:opacity-50 hover:bg-[#1D5620] transition-colors mb-[12px]">
             {isLoading ? "Submitting..." : "Confirm withdrawal"}
           </button>
           <button type="button" onClick={onClose}
@@ -200,6 +198,7 @@ function WithdrawalModal({ availableBalance, onClose, onConfirm, isLoading }: {
 export default function VendorEarningsPage() {
   const { user } = useAuthStore();
   const isMock = user?.id === "mock-vendor-001";
+  const queryClient = useQueryClient();
 
   const [showWithdrawal, setShowWithdrawal] = useState(false);
 
@@ -207,6 +206,17 @@ export default function VendorEarningsPage() {
     queryKey: ["vendor-balance"],
     queryFn: async () => {
       const { data } = await apiClient.get("/vendors/me/balance");
+      return data?.data ?? data;
+    },
+    enabled: !isMock,
+    staleTime: 0,
+    refetchInterval: 30000,
+  });
+
+  const { data: profile } = useQuery<{ bankAccount?: BankAccount | null }>({
+    queryKey: ["vendor-profile"],
+    queryFn: async () => {
+      const { data } = await apiClient.get("/vendors/me/profile");
       return data?.data ?? data;
     },
     enabled: !isMock,
@@ -219,6 +229,8 @@ export default function VendorEarningsPage() {
       return data?.data ?? data ?? [];
     },
     enabled: !isMock,
+    staleTime: 0,
+    refetchInterval: 30000, // auto-refresh every 30s
   });
 
   const withdrawMutation = useMutation({
@@ -228,11 +240,13 @@ export default function VendorEarningsPage() {
     onSuccess: () => {
       toast.success("Withdrawal request submitted!");
       setShowWithdrawal(false);
+      queryClient.invalidateQueries({ queryKey: ["vendor-balance"] });
+      queryClient.invalidateQueries({ queryKey: ["vendor-withdrawals"] });
     },
     onError: () => toast.error("Failed to request withdrawal. Please try again."),
   });
 
-  const bal = isMock ? MOCK_BALANCE : (balance ?? { availableBalance: 0, totalBalance: 0 });
+  const bal = isMock ? MOCK_BALANCE : (balance ?? { availableBalance: 0, withdrawableBalance: 0, totalEarned: 0, totalWithdrawn: 0, pendingWithdrawals: 0 });
   const txns = isMock ? MOCK_WITHDRAWALS : (withdrawals ?? []);
 
   return (
@@ -268,33 +282,47 @@ export default function VendorEarningsPage() {
 
       <div className="px-[20px] md:px-[32px] lg:px-[40px] pt-[20px] pb-[24px]">
         {/* Balance cards */}
-        <div className="flex gap-[12px] mb-[8px]">
-          {/* Available balance */}
-          <div className="flex-1 bg-white rounded-[12px] border border-[#EAEAEA] p-[14px] flex items-center gap-[12px]">
-            <div className="w-[44px] h-[44px] rounded-full bg-[#FDC500] flex items-center justify-center shrink-0">
-              <Wallet size={20} className="text-white" />
-            </div>
-            <div>
-              <p className="font-jakarta text-[11px] text-[#9B9B9B] tracking-[-0.04em] leading-[1.3]">Avail. Balance</p>
-              <p className="font-jakarta text-[14px] font-bold text-[#151515] tracking-[-0.04em]">
-                {formatNaira(bal.availableBalance)}
-              </p>
-            </div>
-          </div>
-
-          {/* Total balance */}
-          <div className="flex-1 bg-white rounded-[12px] border border-[#EAEAEA] p-[14px] flex items-center gap-[12px]">
+        <div className="grid grid-cols-2 gap-[12px] mb-[8px]">
+          <div className="bg-white rounded-[12px] border border-[#EAEAEA] p-[14px] flex items-center gap-[12px]">
             <div className="w-[44px] h-[44px] rounded-full bg-[#2E7D32] flex items-center justify-center shrink-0">
               <Banknote size={20} className="text-white" />
             </div>
             <div>
-              <p className="font-jakarta text-[11px] text-[#9B9B9B] tracking-[-0.04em] leading-[1.3]">Total Balance</p>
-              <p className="font-jakarta text-[14px] font-bold text-[#151515] tracking-[-0.04em]">
-                {formatNaira(bal.totalBalance)}
-              </p>
+              <p className="font-jakarta text-[11px] text-[#9B9B9B] tracking-[-0.04em] leading-[1.3]">Available Balance</p>
+              <p className="font-jakarta text-[14px] font-bold text-[#151515] tracking-[-0.04em]">{formatNaira(bal.availableBalance)}</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-[12px] border border-[#EAEAEA] p-[14px] flex items-center gap-[12px]">
+            <div className="w-[44px] h-[44px] rounded-full bg-[#FDC500] flex items-center justify-center shrink-0">
+              <Wallet size={20} className="text-white" />
+            </div>
+            <div>
+              <p className="font-jakarta text-[11px] text-[#9B9B9B] tracking-[-0.04em] leading-[1.3]">Withdrawable</p>
+              <p className="font-jakarta text-[14px] font-bold text-[#151515] tracking-[-0.04em]">{formatNaira(bal.withdrawableBalance)}</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-[12px] border border-[#EAEAEA] p-[14px] flex items-center gap-[12px]">
+            <div className="w-[44px] h-[44px] rounded-full bg-[#E53935] flex items-center justify-center shrink-0">
+              <Banknote size={20} className="text-white" />
+            </div>
+            <div>
+              <p className="font-jakarta text-[11px] text-[#9B9B9B] tracking-[-0.04em] leading-[1.3]">Total Withdrawn</p>
+              <p className="font-jakarta text-[14px] font-bold text-[#151515] tracking-[-0.04em]">{formatNaira(bal.totalWithdrawn)}</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-[12px] border border-[#EAEAEA] p-[14px] flex items-center gap-[12px]">
+            <div className="w-[44px] h-[44px] rounded-full bg-[#9B9B9B] flex items-center justify-center shrink-0">
+              <Wallet size={20} className="text-white" />
+            </div>
+            <div>
+              <p className="font-jakarta text-[11px] text-[#9B9B9B] tracking-[-0.04em] leading-[1.3]">Pending Withdrawals</p>
+              <p className="font-jakarta text-[14px] font-bold text-[#151515] tracking-[-0.04em]">{formatNaira(bal.pendingWithdrawals)}</p>
             </div>
           </div>
         </div>
+        <p className="font-jakarta text-[11px] text-[#9B9B9B] tracking-[-0.04em] leading-[1.5] mb-[4px]">
+          Withdrawable balance excludes orders within the 24hr dispute window and any active disputes.
+        </p>
 
         <p className="font-jakarta text-[11px] text-[#9B9B9B] tracking-[-0.04em] leading-[1.5] mb-[24px]">
           Available balance is the balance you can withdraw at this time.
@@ -360,7 +388,8 @@ export default function VendorEarningsPage() {
       {/* Withdrawal modal */}
       {showWithdrawal && (
         <WithdrawalModal
-          availableBalance={bal.availableBalance}
+          availableBalance={bal.withdrawableBalance}
+          savedAccount={profile?.bankAccount ?? null}
           onClose={() => setShowWithdrawal(false)}
           isLoading={withdrawMutation.isPending}
           onConfirm={(data) => {

@@ -12,6 +12,9 @@ export interface User {
   avatar?: string;
   isVerified: boolean;
   createdAt: string;
+  campusId?: string;
+  campus?: { id: string; name: string; isActive: boolean };
+  campusSuspended?: boolean;
 }
 
 export interface AuthTokens {
@@ -44,13 +47,14 @@ export interface Product {
   imageUrls?: string[];        // legacy field
   images?: string[];           // API field
   category: Category;
-  vendor: Pick<Vendor, "id" | "storeName" | "rating">;
+  vendor: Pick<Vendor, "id" | "storeName" | "rating"> & { maxPreorderDays?: number | null };
   stock: number;
   rating?: number;
   reviewCount?: number;
   isAvailable?: boolean;       // legacy
   isActive?: boolean;          // API field
   saleType?: string;
+  maxPreorderDays?: number | null;
   createdAt: string;
 }
 

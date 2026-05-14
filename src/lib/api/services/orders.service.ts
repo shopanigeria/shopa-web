@@ -38,8 +38,8 @@ export const ordersService = {
   },
 
   getMyOrders: async (): Promise<Order[]> => {
-    const { data } = await apiClient.get<Order[]>("/orders/my-orders");
-    return data;
+    const { data } = await apiClient.get("/orders/my-orders");
+    return Array.isArray(data) ? data : (data?.data ?? []);
   },
 
   getById: async (id: string): Promise<Order> => {
@@ -48,7 +48,11 @@ export const ordersService = {
   },
 
   initiatePayment: async (orderId: string): Promise<InitiatePaymentResponse> => {
-    const { data } = await apiClient.post<InitiatePaymentResponse>("/payments/initialize", { orderId });
+    const callbackUrl = `${process.env.NEXT_PUBLIC_APP_URL}/checkout/success`;
+    const { data } = await apiClient.post<InitiatePaymentResponse>("/payments/initialize", {
+      orderId,
+      callbackUrl,
+    });
     return data;
   },
 

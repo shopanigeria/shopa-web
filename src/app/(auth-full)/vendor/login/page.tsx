@@ -70,7 +70,15 @@ function VendorLoginForm() {
           Sign in to your vendor account
         </p>
         {error && (
-          <p className="text-[#FDC500] text-[14px] font-medium leading-[28px] mt-1">{error}</p>
+          <div className={`mt-[8px] rounded-[8px] px-[12px] py-[10px] text-[13px] font-medium leading-[1.5] ${
+            error.toLowerCase().includes("pending")
+              ? "bg-[#FFF3E0] text-[#E65100]"
+              : error.toLowerCase().includes("not approved")
+              ? "bg-[#FFEBEE] text-[#E53935]"
+              : "bg-[#FFEBEE] text-[#E53935]"
+          }`}>
+            {error}
+          </div>
         )}
       </div>
 
@@ -164,7 +172,7 @@ function VendorLoginForm() {
 
       <p className="text-center text-[13px] font-medium tracking-[-0.04em] leading-[28px] text-[#9B9B9B] mt-[4px]">
         Are you a customer?{" "}
-        <Link href="/login" className="text-[#2E7D32] font-semibold underline">
+        <Link href="app.shopshopa.com.ng/login" className="text-[#2E7D32] font-semibold underline">
           Customer Login
         </Link>
       </p>

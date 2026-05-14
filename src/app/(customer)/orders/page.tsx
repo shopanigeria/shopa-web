@@ -14,8 +14,8 @@ type SortOption = "Most recent" | "Oldest";
 type FilterOption = "All" | "Completed" | "Ongoing" | "Canceled";
 
 function mapStatus(status: string): Exclude<FilterOption, "All"> {
-  if (status === "COMPLETED") return "Completed";
-  if (status === "CANCELLED") return "Canceled";
+  if (["COMPLETED", "DELIVERED"].includes(status)) return "Completed";
+  if (["CANCELLED", "REJECTED", "FAILED"].includes(status)) return "Canceled";
   return "Ongoing";
 }
 
@@ -162,12 +162,22 @@ export default function OrdersPage() {
                   year: "numeric",
                 })}
               </p>
-              <Link
-                href={ROUTES.ORDER(order.id)}
-                className="font-jakarta text-[12px] font-regular text-[#FDC500] underline tracking-[-0.04em]"
-              >
-                View Order Details
-              </Link>
+              <div className="flex items-center gap-[16px]">
+                <Link
+                  href={ROUTES.ORDER(order.id)}
+                  className="font-jakarta text-[12px] font-regular text-[#FDC500] underline tracking-[-0.04em]"
+                >
+                  View Order Details
+                </Link>
+                {order.uiStatus === "Completed" && (
+                  <Link
+                    href={`/products/${(order as unknown as { orderItems?: { productId?: string }[] }).orderItems?.[0]?.productId ?? ""}?review=true`}
+                    className="font-jakarta text-[12px] font-semibold text-[#2E7D32] underline tracking-[-0.04em]"
+                  >
+                    Leave a Review
+                  </Link>
+                )}
+              </div>
             </div>
           ))}
         </div>

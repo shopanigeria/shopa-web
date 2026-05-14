@@ -41,7 +41,7 @@ export default function AdminStudentsPage() {
   );
 
   return (
-    <AdminLayout campusName="Crawford University">
+    <AdminLayout >
       <div className="mb-[20px]">
         <h1 className="font-satoshi font-bold text-[20px] md:text-[22px] text-[#151515]">Students</h1>
         <p className="font-jakarta text-[13px] text-[#9B9B9B] mt-[2px]">{all.length} students on this campus</p>

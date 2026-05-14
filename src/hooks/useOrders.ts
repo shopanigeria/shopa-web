@@ -8,7 +8,7 @@ export function useOrders() {
   return useQuery({
     queryKey: QUERY_KEYS.ORDERS,
     queryFn: ordersService.getMyOrders,
-    staleTime: 2 * 60 * 1000,
+    staleTime: 0,
   });
 }
 

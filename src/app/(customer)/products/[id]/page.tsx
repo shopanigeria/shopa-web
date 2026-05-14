@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { ChevronLeft, Heart, Minus, Plus, Star, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
@@ -33,6 +33,7 @@ function isClothingCategory(categoryName: string): boolean {
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const { data: product, isLoading, isError } = useProduct(id);
   const { data: reviews } = useProductReviews(id);
@@ -41,8 +42,34 @@ export default function ProductDetailPage() {
 
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState<"details" | "reviews">("details");
+
+  useEffect(() => {
+    if (searchParams.get("review") === "true") setActiveTab("reviews");
+  }, [searchParams]);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
+
+  const handleSubmitReview = async () => {
+    if (!reviewRating) { toast.error("Please select a star rating."); return; }
+    if (!reviewComment.trim()) { toast.error("Please write a comment."); return; }
+    setSubmittingReview(true);
+    try {
+      await apiClient.post("/reviews", { productId: id, rating: reviewRating, comment: reviewComment.trim() });
+      toast.success("Review submitted!");
+      setReviewRating(0);
+      setReviewComment("");
+      setShowReviewModal(false);
+    } catch {
+      toast.error("Failed to submit review. Make sure you have a delivered order for this product.");
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   const wishlisted = isSaved(id);
 
@@ -72,12 +99,14 @@ export default function ProductDetailPage() {
     );
   }
 
-  const imageUri = product.imageUrls?.[0] ?? null;
+  const imageUri = product.imageUrls?.[0] ?? product.images?.[0] ?? null;
   const price = Number(product.price);
   const vendorName = product.vendor?.storeName ?? "Unknown Store";
   const description = product.description ?? "No description available.";
   const availableStock = Math.max(0, product.stock ?? 0);
-  const canAddToCart = (product.isAvailable ?? product.isActive ?? true) && availableStock > 0;
+  const isPreorder = product.saleType === "PREORDER";
+  const maxPreorderDays = product.maxPreorderDays ?? product.vendor?.maxPreorderDays ?? null;
+  const canAddToCart = (product.isAvailable ?? product.isActive ?? true) && (isPreorder || availableStock > 0);
   const reviewList = reviews ?? [];
   const reviewCount = reviewList.length;
   const avgRating =
@@ -98,7 +127,7 @@ export default function ProductDetailPage() {
     <div className="bg-[#F7FFF8] min-h-screen md:max-w-[1280px] md:mx-auto">
 
       {/* ── Header row: back + wishlist (mobile only full, md+ inline) ── */}
-      <div className="flex items-center justify-between px-[24px] pt-[48px] md:pt-[24px] pb-[12px]">
+      <div className="flex items-center justify-between px-[16px] sm:px-[24px] pt-[36px] xs:pt-[48px] md:pt-[24px] pb-[12px]">
         <button
           type="button"
           onClick={() => router.back()}
@@ -127,9 +156,9 @@ export default function ProductDetailPage() {
       <div className="md:flex md:gap-[40px] md:px-6 lg:px-8 md:pb-[60px]">
 
         {/* ── Product image ── */}
-        <div className="h-[280px] md:h-[480px] md:w-[440px] md:shrink-0 w-full px-[24px] md:px-0 bg-[#F7FFF8]">
+        <div className="h-[320px] md:h-[480px] md:w-[440px] md:shrink-0 w-full bg-white md:rounded-[16px] overflow-hidden">
           {imageUri ? (
-            <div className="relative h-full w-full rounded-[16px] overflow-hidden">
+            <div className="relative h-full w-full">
               <Image
                 src={imageUri}
                 alt={product.name}
@@ -140,14 +169,14 @@ export default function ProductDetailPage() {
               />
             </div>
           ) : (
-            <div className="flex h-full w-full items-center justify-center">
+            <div className="flex h-full w-full items-center justify-center bg-[#EAEAEA]">
               <ShoppingBag size={64} className="text-[#9B9B9B]" />
             </div>
           )}
         </div>
 
         {/* ── White details card ── */}
-        <div className="-mt-6 md:mt-0 md:flex-1 rounded-t-[30px] md:rounded-[16px] bg-white pb-[160px] md:pb-[32px] border-t border-[rgba(0,0,0,0.25)] md:border md:border-[#EAEAEA]">
+        <div className="md:mt-0 md:flex-1 rounded-t-[30px] md:rounded-[16px] bg-white pb-[160px] md:pb-[32px] shadow-[0px_-4px_12px_rgba(0,0,0,0.08)] md:shadow-none md:border md:border-[#EAEAEA]">
           <div className="px-[24px] pt-[20px]">
 
             {/* Name + qty stepper */}
@@ -285,18 +314,34 @@ export default function ProductDetailPage() {
                 )}
               </p>
 
-              {/* Stock info */}
-              <div className="mt-[16px] flex items-center gap-[8px]">
-                <div
-                  className={cn(
-                    "w-[8px] h-[8px] rounded-full",
-                    canAddToCart ? "bg-[#2E7D32]" : "bg-red-500"
-                  )}
-                />
-                <span className="font-jakarta text-[14px] text-[#9B9B9B] leading-[1.26] tracking-[-0.04em]">
-                  {canAddToCart ? `${availableStock} in stock` : "Out of stock"}
-                </span>
-              </div>
+              {/* Stock info — only show count if below 10 or out of stock */}
+              {!isPreorder && (
+                <div className="mt-[16px] flex items-center gap-[8px]">
+                  <div className={cn("w-[8px] h-[8px] rounded-full", canAddToCart ? "bg-[#2E7D32]" : "bg-red-500")} />
+                  <span className="font-jakarta text-[14px] text-[#9B9B9B] leading-[1.26] tracking-[-0.04em]">
+                    {!canAddToCart
+                      ? "Out of stock"
+                      : availableStock < 10
+                      ? `Only ${availableStock} left in stock!`
+                      : "In stock"}
+                  </span>
+                </div>
+              )}
+
+              {/* Preorder disclaimer */}
+              {isPreorder && (
+                <div className="mt-[16px] rounded-[8px] bg-[#FFF8E1] border border-[#FDC500] px-[14px] py-[12px]">
+                  <p className="font-jakarta text-[12px] font-bold text-[#CD9F00] mb-[4px] tracking-[-0.04em]">
+                    Pre-order Item
+                  </p>
+                  <p className="font-jakarta text-[12px] text-[#767676] leading-[1.6] tracking-[-0.04em]">
+                    This item is available on pre-order.{" "}
+                    {maxPreorderDays
+                      ? `Your order will be ready within ${maxPreorderDays} day${maxPreorderDays === 1 ? "" : "s"} of purchase.`
+                      : "The vendor will confirm the delivery timeframe after your order."}
+                  </p>
+                </div>
+              )}
 
               {/* Add to cart — inline on desktop */}
               <div className="hidden md:flex items-center justify-between mt-[32px] pt-[20px] border-t border-[#EAEAEA]">
@@ -320,15 +365,28 @@ export default function ProductDetailPage() {
             </div>
           ) : (
             <div className="px-[24px] py-[12px]">
+              {/* Add Review button */}
+              <div className="flex justify-end mb-[16px]">
+                <button
+                  type="button"
+                  onClick={() => setShowReviewModal(true)}
+                  className="flex items-center gap-[6px] bg-[#D8FFDA] rounded-[8px] px-[12px] py-[7px] font-jakarta text-[12px] font-semibold text-[#2E7D32] tracking-[-0.04em]"
+                >
+                  <span className="text-[16px] leading-none">+</span>
+                  Add Review
+                </button>
+              </div>
+
+              {/* Existing reviews */}
               {reviewList.length === 0 ? (
-                <p className="font-jakarta text-[14px] text-[#9B9B9B] text-center py-8 leading-[2]">
+                <p className="font-jakarta text-[14px] text-[#9B9B9B] text-center py-4 leading-[2]">
                   No reviews yet. Be the first to review!
                 </p>
               ) : (
                 reviewList.map((review) => (
                   <div key={review.id} className="mb-[24px]">
                     <div className="flex items-center justify-between mb-[6px]">
-                      <p className="font-jakarta font-regular text-[16px] text-[#151515] leading-[1.26] tracking-[-0.04em]">
+                      <p className="font-jakarta font-semibold text-[14px] text-[#151515] leading-[1.26] tracking-[-0.04em]">
                         {review.reviewer?.firstName ?? "Anonymous"}{" "}
                         {review.reviewer?.lastName ?? ""}
                       </p>
@@ -343,20 +401,17 @@ export default function ProductDetailPage() {
                     </div>
                     <div className="flex items-center gap-[2px] mb-[6px]">
                       {[1, 2, 3, 4, 5].map((s) => (
-                        <Star
-                          key={s}
-                          size={16}
-                          className={cn(
-                            s <= review.rating
-                              ? "fill-[#FDC500] text-[#FDC500]"
-                              : "fill-transparent text-[#FDC500]"
-                          )}
+                        <Star key={s} size={14}
+                          className={cn(s <= review.rating ? "fill-[#FDC500] text-[#FDC500]" : "fill-transparent text-[#FDC500]")}
                         />
                       ))}
                     </div>
                     <p className="font-jakarta text-[14px] text-[#151515] leading-[1.8] tracking-[-0.04em]">
                       {review.comment ?? ""}
                     </p>
+                    {review.id !== reviewList[reviewList.length - 1].id && (
+                      <div className="border-b border-[#EAEAEA] mt-[20px]" />
+                    )}
                   </div>
                 ))
               )}
@@ -365,9 +420,91 @@ export default function ProductDetailPage() {
         </div>
       </div>
 
+      {/* ── Review Modal ── */}
+      {showReviewModal && (
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setShowReviewModal(false)}
+          />
+          {/* Sheet */}
+          <div className="relative z-10 w-full max-w-[480px] bg-white rounded-t-[24px] md:rounded-[16px] px-[16px] sm:px-[24px] pt-[24px] pb-[40px]">
+            {/* Handle */}
+            <div className="w-[40px] h-[4px] bg-[#EAEAEA] rounded-full mx-auto mb-[20px] md:hidden" />
+
+            <div className="flex items-center justify-between mb-[20px]">
+              <p className="font-satoshi font-bold text-[18px] text-[#151515]">Write a Review</p>
+              <button
+                type="button"
+                onClick={() => setShowReviewModal(false)}
+                className="w-[32px] h-[32px] rounded-full bg-[#EAEAEA] flex items-center justify-center hover:bg-[#D8FFDA] transition-colors"
+                aria-label="Close"
+              >
+                <span className="font-jakarta text-[16px] leading-none text-[#545454]">✕</span>
+              </button>
+            </div>
+
+            {/* Star picker */}
+            <p className="font-jakarta text-[13px] font-medium text-[#333333] mb-[10px] tracking-[-0.04em]">
+              Rating
+            </p>
+            <div className="flex items-center gap-[8px] mb-[20px]">
+              {[1, 2, 3, 4, 5].map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setReviewRating(s)}
+                  onMouseEnter={() => setHoverRating(s)}
+                  onMouseLeave={() => setHoverRating(0)}
+                  aria-label={`${s} star`}
+                  className="focus:outline-none"
+                >
+                  <Star
+                    size={32}
+                    className={cn(
+                      "transition-colors",
+                      s <= (hoverRating || reviewRating)
+                        ? "fill-[#FDC500] text-[#FDC500]"
+                        : "fill-transparent text-[#EAEAEA]"
+                    )}
+                  />
+                </button>
+              ))}
+            </div>
+
+            {/* Comment */}
+            <p className="font-jakarta text-[13px] font-medium text-[#333333] mb-[8px] tracking-[-0.04em]">
+              Comment
+            </p>
+            <textarea
+              value={reviewComment}
+              onChange={(e) => setReviewComment(e.target.value)}
+              placeholder="Share your experience with this product..."
+              rows={4}
+              className="w-full bg-[#EAEAEA] rounded-[8px] px-[14px] py-[12px] font-jakarta text-[14px] text-[#151515] placeholder-[#C2C2C2] tracking-[-0.04em] resize-none focus:outline-none focus:ring-2 focus:ring-[#2E7D32]"
+            />
+
+            {/* Submit */}
+            <button
+              type="button"
+              onClick={handleSubmitReview}
+              disabled={submittingReview}
+              className="w-full h-[53px] rounded-[8px] bg-[#2E7D32] font-jakarta text-[14px] font-semibold text-white mt-[20px] disabled:opacity-50 hover:bg-[#1D5620] transition-colors flex items-center justify-center"
+            >
+              {submittingReview ? (
+                <div className="h-5 w-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+              ) : (
+                "Submit Review"
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Sticky bottom bar — mobile only ── */}
-      <div className="md:hidden fixed bottom-[88px] left-0 right-0 z-40 flex justify-center pointer-events-none">
-        <div className="w-full max-w-[390px] px-[24px] pointer-events-auto">
+      <div className="md:hidden fixed bottom-[48px] left-0 right-0 z-40 flex justify-center pointer-events-none">
+        <div className="w-full px-[16px] sm:px-[24px] pointer-events-auto">
           <div className="bg-white rounded-[16px] shadow-[0px_-2px_12px_rgba(0,0,0,0.08)] px-[20px] py-[14px] flex items-center justify-between">
             <div>
               <p className="font-jakarta text-[12px] text-[#9B9B9B] leading-[1.26] tracking-[-0.04em]">

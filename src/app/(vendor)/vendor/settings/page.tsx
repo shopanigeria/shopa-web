@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, User, Store, Lock, Bell, Landmark, LogOut, X, Check, Eye, EyeOff } from "lucide-react";
@@ -56,7 +56,7 @@ function SuccessModal({ message, onClose }: { message: string; onClose: () => vo
     <>
       <Backdrop onClose={onClose} />
       <div className="fixed inset-0 z-50 flex items-center justify-center px-[24px]">
-        <div className="bg-white rounded-[16px] border border-[#2E7D32] px-[32px] pt-[32px] pb-[32px] w-full max-w-[360px] relative flex flex-col items-center">
+        <div className="bg-white rounded-[16px] border border-[#2E7D32] px-[16px] sm:px-[32px] pt-[32px] pb-[32px] w-full max-w-[360px] relative flex flex-col items-center">
           <button type="button" aria-label="Close" onClick={onClose} className="absolute top-[16px] right-[16px]">
             <div className="w-[28px] h-[28px] rounded-full border-2 border-[#2E7D32] flex items-center justify-center">
               <X size={14} className="text-[#2E7D32]" />
@@ -367,9 +367,24 @@ function BankAccount({ isMock, onBack }: { isMock: boolean; onBack: () => void }
   const [accountName, setAccountName] = useState("");
   const [success, setSuccess] = useState(false);
 
+  const { data: profile } = useQuery({
+    queryKey: ["vendor-profile"],
+    queryFn: async () => { const { data } = await apiClient.get("/vendors/me/profile"); return data?.data ?? data; },
+    enabled: !isMock,
+  });
+
+  // Pre-fill existing bank details when profile loads
+  useEffect(() => {
+    if (profile?.bankAccount) {
+      setAccountNumber(profile.bankAccount.accountNumber ?? "");
+      setBankName(profile.bankAccount.bankName ?? "");
+      setAccountName(profile.bankAccount.accountName ?? "");
+    }
+  }, [profile]);
+
   const mutation = useMutation({
     mutationFn: async () => {
-      await apiClient.patch("/vendors/me", { bankAccount: { accountNumber, bankName, accountName } });
+      await apiClient.patch("/vendors/me/profile", { bankAccount: { accountNumber, bankName, accountName } });
     },
     onSuccess: () => setSuccess(true),
     onError: () => toast.error("Failed to save bank details."),

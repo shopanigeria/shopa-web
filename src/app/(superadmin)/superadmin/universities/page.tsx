@@ -30,7 +30,7 @@ export default function UniversitiesPage() {
 
   const { data: campuses, isLoading } = useQuery<Campus[]>({
     queryKey: ["superadmin-campuses"],
-    queryFn: async () => { const { data } = await apiClient.get("/campuses"); return data?.data ?? data ?? []; },
+    queryFn: async () => { const { data } = await apiClient.get("/campuses", { params: { includeInactive: true } }); return Array.isArray(data) ? data : (data?.data ?? []); },
   });
 
   const createMutation = useMutation({
@@ -146,7 +146,9 @@ export default function UniversitiesPage() {
       {toggleModal && (
         <ConfirmModal
           title={`${toggleModal.isActive ? "Deactivate" : "Activate"} ${toggleModal.name}?`}
-          message={toggleModal.isActive ? "This will disable all vendor activity on this campus." : "This will re-enable activity on this campus."}
+          message={toggleModal.isActive
+            ? "All students and vendors on this campus will see a suspension notice and cannot buy or sell until reactivated."
+            : "This campus will be reactivated. Students and vendors will regain full access."}
           confirmLabel={toggleModal.isActive ? "Deactivate" : "Activate"}
           variant={toggleModal.isActive ? "danger" : "primary"}
           isLoading={toggleMutation.isPending}

@@ -16,6 +16,8 @@ interface VendorProfile {
   id: string;
   storeName: string;
   availableBalance?: number;
+  maxPreorderDays?: number;
+  saleType?: string;
 }
 
 interface VendorAnalytics {
@@ -37,10 +39,15 @@ interface Order {
   status: string;
   totalAmount: string;
   deliveryAddress?: string;
+  pickupLocation?: string;
+  deliveryType?: string;
+  notes?: string;
   createdAt: string;
   expectedDelivery?: string;
+  saleType?: string;
   orderItems: OrderItem[];
   user?: { firstName: string; lastName: string };
+  buyer?: { firstName: string; lastName: string };
 }
 
 interface Dispute {
@@ -128,6 +135,12 @@ function Backdrop({ onClose }: { onClose: () => void }) {
 function OrderDetailModal({ order, onClose }: { order: Order; onClose: () => void }) {
   const item = order.orderItems[0];
   const img = item?.product?.imageUrls?.[0] ?? item?.product?.images?.[0];
+  const customer = order.user ?? order.buyer;
+  const deliveryInfo = order.notes?.startsWith("Pickup location:")
+    ? order.notes
+    : order.deliveryType === "PICKUP" || order.pickupLocation
+    ? `Pickup: ${order.pickupLocation ?? "—"}`
+    : order.deliveryAddress ?? "—";
   return (
     <>
       <Backdrop onClose={onClose} />
@@ -139,9 +152,9 @@ function OrderDetailModal({ order, onClose }: { order: Order; onClose: () => voi
             </div>
           </button>
           <div className="mb-[16px]">
-            <p className="font-jakarta font-bold text-[14px] text-[#333333] tracking-[-0.04em]">Name</p>
+            <p className="font-jakarta font-bold text-[14px] text-[#333333] tracking-[-0.04em]">Customer Name</p>
             <p className="font-jakarta text-[14px] text-[#9B9B9B] tracking-[-0.04em]">
-              {order.user ? `${order.user.firstName} ${order.user.lastName}` : "—"}
+              {customer ? `${customer.firstName} ${customer.lastName}` : "—"}
             </p>
           </div>
           <div className="mb-[16px]">
@@ -159,12 +172,10 @@ function OrderDetailModal({ order, onClose }: { order: Order; onClose: () => voi
             <p className="font-jakarta font-bold text-[14px] text-[#333333] tracking-[-0.04em]">Total Cost</p>
             <p className="font-jakarta text-[14px] text-[#9B9B9B] tracking-[-0.04em]">{formatNaira(parseFloat(order.totalAmount))}</p>
           </div>
-          {order.deliveryAddress && (
-            <div>
-              <p className="font-jakarta font-bold text-[14px] text-[#333333] tracking-[-0.04em]">Delivery Address</p>
-              <p className="font-jakarta text-[14px] text-[#9B9B9B] tracking-[-0.04em]">{order.deliveryAddress}</p>
-            </div>
-          )}
+          <div>
+            <p className="font-jakarta font-bold text-[14px] text-[#333333] tracking-[-0.04em]">Delivery</p>
+            <p className="font-jakarta text-[14px] text-[#9B9B9B] tracking-[-0.04em]">{deliveryInfo}</p>
+          </div>
         </div>
       </div>
     </>
@@ -172,7 +183,7 @@ function OrderDetailModal({ order, onClose }: { order: Order; onClose: () => voi
 }
 
 function DisputeDetailModal({ dispute, onClose }: { dispute: Dispute; onClose: () => void }) {
-  const item = dispute.order?.orderItems[0];
+  const item = dispute.order?.orderItems?.[0];
   const img = item?.product?.imageUrls?.[0] ?? item?.product?.images?.[0];
   const short = (dispute.order?.orderNumber ?? dispute.orderId).slice(-8).toUpperCase();
   return (
@@ -223,13 +234,17 @@ function DisputeDetailModal({ dispute, onClose }: { dispute: Dispute; onClose: (
   );
 }
 
-function AcceptOrderModal({ order, onClose, onConfirm, isLoading }: {
-  order: Order; onClose: () => void; onConfirm: (date: string) => void; isLoading: boolean;
+function AcceptOrderModal({ order, onClose, onConfirm, isLoading, maxPreorderDays, vendorSaleType }: {
+  order: Order; onClose: () => void; onConfirm: (date: string) => void; isLoading: boolean; maxPreorderDays?: number; vendorSaleType?: string;
 }) {
   const [date, setDate] = useState("");
 
-  const minDate = new Date(order.createdAt).toISOString().split("T")[0];
-  const maxDate = new Date(new Date(order.createdAt).getTime() + 5 * 24 * 60 * 60 * 1000)
+  const minDate = new Date().toISOString().split("T")[0];
+  const isPreorder =
+    order.saleType === "PREORDER" ||
+    (order.saleType !== "IN_STOCK" && vendorSaleType === "PREORDER");
+  const maxDays = isPreorder ? (maxPreorderDays ?? 30) : 3;
+  const maxDate = new Date(new Date(order.createdAt).getTime() + maxDays * 24 * 60 * 60 * 1000)
     .toISOString().split("T")[0];
 
   return (
@@ -244,7 +259,7 @@ function AcceptOrderModal({ order, onClose, onConfirm, isLoading }: {
           </button>
           <p className="font-jakarta font-bold text-[16px] text-[#333333] tracking-[-0.04em] mb-[4px] mt-[8px]">Set Delivery Date</p>
           <p className="font-jakarta text-[12px] text-[#9B9B9B] tracking-[-0.04em] mb-[12px]">
-            Must be within 5 days of order placement.
+            {isPreorder ? `Must be within ${maxDays} days of order placement (your preorder window).` : "Must be within 3 days of order placement."}
           </p>
           <input
             type="date"
@@ -310,37 +325,43 @@ export default function VendorDashboardPage() {
   // ── Data fetching ──
   const { data: profile } = useQuery<VendorProfile>({
     queryKey: ["vendor-profile"],
-    queryFn: async () => { const { data } = await apiClient.get("/vendors/me"); return data; },
+    queryFn: async () => { const { data } = await apiClient.get("/vendors/me/profile"); return data?.data ?? data; },
     enabled: !isMock,
     retry: false,
   });
 
   const { data: analytics } = useQuery<VendorAnalytics>({
     queryKey: ["vendor-analytics"],
-    queryFn: async () => { const { data } = await apiClient.get("/analytics/vendor"); return data; },
+    queryFn: async () => { const { data } = await apiClient.get("/analytics/vendor"); return data?.data ?? data; },
     enabled: !isMock,
     retry: false,
+    staleTime: 0,
   });
 
-  const { data: incomingOrders } = useQuery<Order[]>({
-    queryKey: ["vendor-orders", "incoming"],
+  const { data: balance } = useQuery<{ availableBalance: number; totalEarned?: number }>({
+    queryKey: ["vendor-balance"],
+    queryFn: async () => { const { data } = await apiClient.get("/vendors/me/balance"); return data?.data ?? data; },
+    enabled: !isMock,
+    retry: false,
+    staleTime: 0,
+  });
+
+  const { data: allOrders } = useQuery<Order[]>({
+    queryKey: ["vendor-orders", "all"],
     queryFn: async () => {
-      const { data } = await apiClient.get("/orders/vendor-orders?status=PAID");
-      return data?.orders ?? data ?? [];
+      const { data } = await apiClient.get("/orders/vendor-orders");
+      return data?.data ?? data?.orders ?? data ?? [];
     },
     enabled: !isMock,
     retry: false,
   });
 
-  const { data: pendingOrders } = useQuery<Order[]>({
-    queryKey: ["vendor-orders", "pending"],
-    queryFn: async () => {
-      const { data } = await apiClient.get("/orders/vendor-orders?status=CONFIRMED");
-      return data?.orders ?? data ?? [];
-    },
-    enabled: !isMock,
-    retry: false,
-  });
+  const incomingOrders = allOrders?.filter((o) =>
+    ["PENDING", "PAID", "PAYMENT_PENDING"].includes(o.status)
+  );
+  const pendingOrders = allOrders?.filter((o) =>
+    ["ACCEPTED", "CONFIRMED", "IN_PROGRESS", "SHIPPED"].includes(o.status)
+  );
 
   const { data: disputes } = useQuery<Dispute[]>({
     queryKey: ["vendor-disputes"],
@@ -352,12 +373,32 @@ export default function VendorDashboardPage() {
     retry: false,
   });
 
-  // Use mock data when in dev mock mode
-  const stats = analytics ?? (isMock ? MOCK_ANALYTICS : null);
+  const { data: unreadCount } = useQuery<number>({
+    queryKey: ["vendor-unread-notifications"],
+    queryFn: async () => {
+      const { data } = await apiClient.get("/notifications/unread-count");
+      return data?.count ?? data ?? 0;
+    },
+    enabled: !isMock,
+    staleTime: 0,
+    refetchInterval: 60000, // refresh every minute
+  });
+
   const incoming = incomingOrders ?? (isMock ? MOCK_INCOMING : []);
   const pending = pendingOrders ?? (isMock ? MOCK_PENDING : []);
   const openDisputes = (disputes ?? (isMock ? MOCK_DISPUTES : [])).filter((d) => d.status === "OPEN");
   const storeName = profile?.storeName ?? user?.firstName ?? "Store";
+
+  // Derive real-time stats — use analytics if available, fall back to counting from actual data
+  const completedOrders = allOrders?.filter((o) => ["DELIVERED", "COMPLETED"].includes(o.status)) ?? [];
+  const stats = isMock ? MOCK_ANALYTICS : {
+    pendingOrders: analytics?.pendingOrders ?? incoming.length,
+    pendingDisputes: analytics?.pendingDisputes ?? openDisputes.length,
+    totalSales: analytics?.totalSales ?? completedOrders.length,
+    availableBalance: balance?.availableBalance
+      ?? analytics?.availableBalance
+      ?? 0,
+  };
 
   // ── Mutations ──
   const acceptMutation = useMutation({
@@ -393,8 +434,13 @@ export default function VendorDashboardPage() {
         <Image src="/images/logo.svg" alt="Shopa" width={100} height={36} priority />
         <div className="flex items-center gap-[12px]">
           <Link href="/vendor/notifications"
-            className="w-[36px] h-[36px] rounded-full bg-white/20 flex items-center justify-center">
+            className="w-[36px] h-[36px] rounded-full bg-white/20 flex items-center justify-center relative">
             <Bell size={18} className="text-white" />
+            {!!unreadCount && unreadCount > 0 && (
+              <span className="absolute -top-[2px] -right-[2px] w-[16px] h-[16px] rounded-full bg-[#E53935] flex items-center justify-center font-jakarta text-[9px] font-bold text-white">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
           </Link>
           <Link href="/vendor/settings"
             className="w-[36px] h-[36px] rounded-full bg-white/20 flex items-center justify-center">
@@ -408,8 +454,13 @@ export default function VendorDashboardPage() {
         <h1 className="font-satoshi font-bold text-[20px] text-[#151515]">Dashboard</h1>
         <div className="flex items-center gap-[10px]">
           <Link href="/vendor/notifications" aria-label="Notifications"
-            className="w-[36px] h-[36px] rounded-full bg-[#F7FFF8] border border-[#EAEAEA] flex items-center justify-center hover:bg-[#D8FFDA] transition-colors">
+            className="w-[36px] h-[36px] rounded-full bg-[#F7FFF8] border border-[#EAEAEA] flex items-center justify-center hover:bg-[#D8FFDA] transition-colors relative">
             <Bell size={18} className="text-[#2E7D32]" />
+            {!!unreadCount && unreadCount > 0 && (
+              <span className="absolute -top-[2px] -right-[2px] w-[16px] h-[16px] rounded-full bg-[#E53935] flex items-center justify-center font-jakarta text-[9px] font-bold text-white">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
           </Link>
           <Link href="/vendor/settings" aria-label="Settings"
             className="w-[36px] h-[36px] rounded-full bg-[#F7FFF8] border border-[#EAEAEA] flex items-center justify-center hover:bg-[#D8FFDA] transition-colors">
@@ -451,8 +502,8 @@ export default function VendorDashboardPage() {
           <StatCard
             iconBg="bg-[#FFC107]"
             iconColor="text-white"
-            label="Avail. Balance"
-            value={formatNaira(stats?.availableBalance ?? 0)}
+            label="Total Earned"
+            value={formatNaira(balance?.totalEarned ?? stats?.availableBalance ?? 0)}
             icon="balance"
           />
         </div>
@@ -539,10 +590,10 @@ export default function VendorDashboardPage() {
                   <p className="font-jakarta font-semibold text-[14px] text-[#333333] tracking-[-0.04em]">
                     Order #{(dispute.order?.orderNumber ?? dispute.orderId).slice(-8).toUpperCase()}
                   </p>
-                  <button type="button"
-                    className="h-[32px] px-[14px] rounded-[6px] bg-[#2E7D32] font-jakarta text-[12px] font-semibold text-white hover:bg-[#1D5620] transition-colors">
+                  <Link href="/vendor/disputes"
+                    className="h-[32px] px-[14px] rounded-[6px] bg-[#2E7D32] font-jakarta text-[12px] font-semibold text-white hover:bg-[#1D5620] transition-colors flex items-center">
                     Resolve
-                  </button>
+                  </Link>
                 </div>
                 <button type="button" onClick={() => setViewDispute(dispute)}
                   className="font-jakarta text-[13px] font-semibold text-[#FDC500] underline tracking-[-0.04em]">
@@ -562,6 +613,8 @@ export default function VendorDashboardPage() {
           order={acceptOrder}
           onClose={() => setAcceptOrder(null)}
           isLoading={acceptMutation.isPending}
+          maxPreorderDays={profile?.maxPreorderDays ?? undefined}
+          vendorSaleType={profile?.saleType ?? undefined}
           onConfirm={(date) => {
             if (isMock) { toast.success("Order accepted! (mock)"); setAcceptOrder(null); return; }
             acceptMutation.mutate({ orderId: acceptOrder.id, date });

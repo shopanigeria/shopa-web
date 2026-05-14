@@ -60,14 +60,14 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
       {/* ── Main content ── */}
       <div className="flex-1 md:ml-[220px] lg:ml-[240px]">
         {/* Mobile: constrained + bottom nav padding */}
-        <div className="w-full max-w-[390px] mx-auto md:max-w-none md:mx-0 relative min-h-screen pb-[80px] md:pb-0">
+        <div className="w-full min-w-0 md:max-w-none md:mx-0 relative min-h-screen pb-[80px] md:pb-0">
           {children}
         </div>
       </div>
 
       {/* ── Bottom nav — mobile only ── */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#EAEAEA]">
-        <div className="flex items-center justify-around h-[60px] px-[8px] max-w-[390px] mx-auto">
+        <div className="flex items-center justify-around h-[60px] px-[2px] w-full">
           {NAV_TABS.map(({ label, href, Icon }) => {
             const active = pathname === href;
             return (
