@@ -28,8 +28,13 @@ export default function AdminStudentsPage() {
   const { user } = useAuthStore();
   const isMock = user?.id === "mock-admin-001";
   const { data: students, isLoading } = useQuery<Student[]>({
-    queryKey: ["admin-students"],
-    queryFn: async () => { const { data } = await apiClient.get("/users/pending-verifications"); return data?.data ?? data ?? []; },
+    queryKey: ["admin-students", user?.campusId],
+    queryFn: async () => {
+      const { data } = await apiClient.get("/users/pending-verifications", {
+        params: user?.campusId ? { campusId: user.campusId } : undefined,
+      });
+      return data?.data ?? data ?? [];
+    },
     enabled: !isMock,
   });
 

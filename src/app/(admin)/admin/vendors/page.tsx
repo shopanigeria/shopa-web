@@ -35,20 +35,21 @@ export default function AdminVendorsPage() {
   const { user } = useAuthStore();
   const isMock = user?.id === "mock-admin-001";
   const { data: vendors, isLoading } = useQuery<Vendor[]>({
-    queryKey: ["admin-vendors"],
+    queryKey: ["admin-vendors", user?.campusId],
     queryFn: async () => {
       const [allRes, pendingRes] = await Promise.all([
-        apiClient.get("/vendors"),
+        apiClient.get("/vendors", {
+          params: user?.campusId ? { campusId: user.campusId } : undefined,
+        }),
         apiClient.get("/vendors/admin/pending"),
       ]);
       const approved = allRes.data?.data ?? allRes.data ?? [];
       const pending = pendingRes.data?.data ?? pendingRes.data ?? [];
-      // Merge, deduplicate by id
       const map = new Map<string, Vendor>();
       [...approved, ...pending].forEach((v: Vendor) => map.set(v.id, v));
       return Array.from(map.values());
     },
-    enabled: !isMock,
+    enabled: !isMock && !!user?.campusId,
   });
 
   const verifyMutation = useMutation({
